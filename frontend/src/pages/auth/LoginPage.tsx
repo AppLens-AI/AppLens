@@ -42,11 +42,9 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-6xl flex flex-col lg:flex-row gap-8 lg:gap-16 items-center animate-blur-in px-4">
-      {/* Left side - Branding & Features */}
       <div className="flex-1 max-w-lg lg:max-w-none">
-        {/* Logo */}
         <div className="flex items-center gap-3 mb-8 animate-slide-up opacity-0 stagger-1" style={{ animationFillMode: 'forwards' }}>
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+          <div className="w-12 h-12 bg-gradient-to-br from-black to-indigo-900 rounded-xl flex items-center justify-center shadow-lg shadow-black-500/25">
             <svg
               className="w-7 h-7 text-white"
               fill="none"
@@ -60,9 +58,8 @@ export default function LoginPage() {
           <span className="text-2xl font-bold text-gray-900">Shotify</span>
         </div>
 
-        {/* Headline */}
         <div className="animate-slide-up opacity-0 stagger-2" style={{ animationFillMode: 'forwards' }}>
-          <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-4">
+          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight mb-4">
             Transform your<br />
             <span className="gradient-text-animated">screenshots</span><br />
             into art
