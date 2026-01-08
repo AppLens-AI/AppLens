@@ -34,32 +34,26 @@ type UploadResult struct {
 }
 
 func (s *UploadService) UploadImage(ctx context.Context, userID string, file *multipart.FileHeader) (*UploadResult, error) {
-	// Validate file type
 	if !isValidImageType(file.Filename) {
 		return nil, fmt.Errorf("invalid file type: only PNG, JPG, JPEG, WebP allowed")
 	}
 
-	// Validate file size (max 10MB)
 	if file.Size > 10*1024*1024 {
 		return nil, fmt.Errorf("file too large: max 10MB allowed")
 	}
 
-	// Open file
 	src, err := file.Open()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer src.Close()
 
-	// Generate unique filename
 	ext := filepath.Ext(file.Filename)
 	filename := fmt.Sprintf("%s-%s%s", time.Now().Format("20060102"), uuid.New().String()[:8], ext)
 	key := fmt.Sprintf("uploads/%s/%s", userID, filename)
 
-	// Get content type
 	contentType := getContentType(ext)
 
-	// Upload to S3
 	url, err := s.s3Client.Upload(ctx, key, src, contentType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload to S3: %w", err)

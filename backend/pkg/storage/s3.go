@@ -23,7 +23,6 @@ func NewS3Client(cfg *appconfig.Config) (*S3Client, error) {
 	var awsCfg aws.Config
 	var err error
 
-	// Use custom endpoint for MinIO or LocalStack
 	if cfg.AWSEndpoint != "" {
 		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
@@ -79,7 +78,6 @@ func (s *S3Client) Upload(ctx context.Context, key string, body io.Reader, conte
 		return "", fmt.Errorf("failed to upload to S3: %w", err)
 	}
 
-	// Return the URL
 	url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", s.bucket, s.region, key)
 	return url, nil
 }

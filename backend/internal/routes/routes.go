@@ -52,7 +52,6 @@ func Setup(router *gin.Engine, db *mongo.Database, s3Client *storage.S3Client, c
 			auth.POST("/login", authHandler.Login)
 		}
 
-		// Public proxy endpoint for images (no auth required)
 		api.GET("/proxy-image", proxyHandler.ProxyImage)
 
 		api.GET("/get-templates", templateHandler.GetTemplates)

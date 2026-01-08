@@ -20,7 +20,6 @@ func NewProjectHandler(projectService *services.ProjectService) *ProjectHandler 
 	}
 }
 
-// CreateProject creates a new project
 func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -43,7 +42,6 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusCreated, "Project created successfully", project)
 }
 
-// GetProjects returns all projects for the authenticated user
 func (h *ProjectHandler) GetProjects(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -60,7 +58,6 @@ func (h *ProjectHandler) GetProjects(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Projects retrieved successfully", projects)
 }
 
-// GetProjectByID returns a specific project
 func (h *ProjectHandler) GetProjectByID(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -87,7 +84,6 @@ func (h *ProjectHandler) GetProjectByID(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Project retrieved successfully", project)
 }
 
-// UpdateProject updates a project
 func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -120,7 +116,6 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Project updated successfully", project)
 }
 
-// DeleteProject deletes a project
 func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {

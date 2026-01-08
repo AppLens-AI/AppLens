@@ -25,7 +25,6 @@ func NewAuthService(userRepo *repository.UserRepository, config *config.Config) 
 }
 
 func (s *AuthService) Register(ctx context.Context, req *models.RegisterRequest) (*models.AuthResponse, error) {
-	// Check if email already exists
 	exists, err := s.userRepo.EmailExists(ctx, req.Email)
 	if err != nil {
 		return nil, err
@@ -34,13 +33,11 @@ func (s *AuthService) Register(ctx context.Context, req *models.RegisterRequest)
 		return nil, errors.New("email already registered")
 	}
 
-	// Hash password
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create user
 	user := &models.User{
 		Email:        req.Email,
 		PasswordHash: hashedPassword,
@@ -51,7 +48,6 @@ func (s *AuthService) Register(ctx context.Context, req *models.RegisterRequest)
 		return nil, err
 	}
 
-	// Generate JWT token
 	token, err := utils.GenerateToken(user.ID.Hex(), s.config.JWTSecret, s.config.JWTExpirationHours)
 	if err != nil {
 		return nil, err
@@ -64,7 +60,6 @@ func (s *AuthService) Register(ctx context.Context, req *models.RegisterRequest)
 }
 
 func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest) (*models.AuthResponse, error) {
-	// Find user by email
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, err
@@ -73,12 +68,10 @@ func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest) (*mod
 		return nil, errors.New("invalid email or password")
 	}
 
-	// Verify password
 	if !utils.CheckPassword(req.Password, user.PasswordHash) {
 		return nil, errors.New("invalid email or password")
 	}
 
-	// Generate JWT token
 	token, err := utils.GenerateToken(user.ID.Hex(), s.config.JWTSecret, s.config.JWTExpirationHours)
 	if err != nil {
 		return nil, err

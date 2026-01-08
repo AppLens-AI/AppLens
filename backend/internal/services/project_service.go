@@ -33,7 +33,6 @@ func (s *ProjectService) CreateProject(ctx context.Context, userID string, req *
 		return nil, errors.New("invalid template ID")
 	}
 
-	// Get template
 	template, err := s.templateRepo.FindByID(ctx, templateObjID)
 	if err != nil {
 		return nil, err
@@ -42,7 +41,6 @@ func (s *ProjectService) CreateProject(ctx context.Context, userID string, req *
 		return nil, errors.New("template not found")
 	}
 
-	// Create project with template config
 	project := &models.Project{
 		UserID:     userObjID,
 		TemplateID: templateObjID,
@@ -119,7 +117,6 @@ func (s *ProjectService) GetProjectByID(ctx context.Context, projectID, userID s
 		return nil, errors.New("project not found")
 	}
 
-	// Get template info
 	template, _ := s.templateRepo.FindByID(ctx, project.TemplateID)
 
 	return &models.ProjectResponse{
@@ -154,7 +151,6 @@ func (s *ProjectService) UpdateProject(ctx context.Context, projectID, userID st
 		return nil, errors.New("project not found")
 	}
 
-	// Update fields
 	if req.Name != "" {
 		project.Name = req.Name
 	}

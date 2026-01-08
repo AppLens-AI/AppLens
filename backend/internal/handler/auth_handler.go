@@ -20,7 +20,6 @@ func NewAuthHandler(authService *services.AuthService) *AuthHandler {
 	}
 }
 
-// Register handles user registration
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req models.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -41,7 +40,6 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusCreated, "User registered successfully", response)
 }
 
-// Login handles user authentication
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -58,7 +56,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Login successful", response)
 }
 
-// GetMe returns the current authenticated user
 func (h *AuthHandler) GetMe(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {

@@ -19,7 +19,6 @@ func NewUploadHandler(uploadService *services.UploadService) *UploadHandler {
 	}
 }
 
-// UploadImage handles image upload to S3
 func (h *UploadHandler) UploadImage(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
