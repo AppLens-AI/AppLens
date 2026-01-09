@@ -647,12 +647,6 @@ export default function ConfigPanel() {
           </>
         )}
       </div>
-
-      <div className="p-4 border-t border-border">
-        <div className="text-xs text-text-muted text-center">
-          Click on elements in the preview to edit
-        </div>
-      </div>
     </div>
   )
 }
