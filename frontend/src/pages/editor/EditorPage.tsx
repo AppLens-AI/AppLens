@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { projectsApi } from '@/lib/api'
 import { useEditorStore } from '@/stores/editorStore'
@@ -11,23 +11,15 @@ import {
   Save,
   Download,
   ArrowLeft,
-  Check,
   RotateCcw,
   Copy,
-  Crop,
-  Lock,
   Trash2,
   Plus,
-  ChevronLeft,
-  ChevronRight,
-  Smartphone,
-  Eye,
 } from 'lucide-react'
 
 export function EditorPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
   
   const {
     slides,
@@ -35,7 +27,6 @@ export function EditorPage() {
     setCurrentSlideId,
     setSelectedLayerId,
     undo,
-    redo,
     historyIndex,
     isDirty,
     setIsDirty,
@@ -48,7 +39,6 @@ export function EditorPage() {
   const [project, setProject] = useState<Project | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [devicePreview, setDevicePreview] = useState<'iphone' | 'android'>('iphone')
 
   useEffect(() => {
     if (!projectId) return
@@ -63,13 +53,16 @@ export function EditorPage() {
         const exports = data.projectConfig.exports?.length 
           ? data.projectConfig.exports 
           : data.template?.jsonConfig.exports || []
+        const slides = data.projectConfig.slides?.length 
+          ? data.projectConfig.slides 
+          : data.template?.jsonConfig.slides || []
           
         initialize(
           data.projectConfig.canvas,
           data.projectConfig.layers,
           data.projectConfig.images || [],
           exports,
-          data.projectConfig.slides 
+          slides
         )
       } catch (error) {
         console.error('Failed to fetch project:', error)
@@ -87,11 +80,7 @@ export function EditorPage() {
       if (e.metaKey || e.ctrlKey) {
         if (e.key === 'z') {
           e.preventDefault()
-          if (e.shiftKey) {
-            redo()
-          } else {
-            undo()
-          }
+          undo()
         }
         if (e.key === 's') {
           e.preventDefault()
@@ -111,7 +100,7 @@ export function EditorPage() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo, currentSlideId, duplicateSlide, setSelectedLayerId])
+  }, [undo, currentSlideId, duplicateSlide, setSelectedLayerId])
 
   const handleSave = useCallback(async () => {
     if (!project || isSaving) return
@@ -141,21 +130,6 @@ export function EditorPage() {
     }
   }, [project, isSaving, setIsDirty])
 
-  const scrollToSlide = (direction: 'left' | 'right') => {
-    const container = scrollContainerRef.current
-    if (!container) return
-    
-    const slideWidth = container.scrollWidth / slides.length
-    const currentScroll = container.scrollLeft
-    const targetScroll = direction === 'left' 
-      ? currentScroll - slideWidth 
-      : currentScroll + slideWidth
-    
-    container.scrollTo({ left: targetScroll, behavior: 'smooth' })
-  }
-
-  const currentSlideIndex = slides.findIndex(s => s.id === currentSlideId)
-
   if (isLoading) {
     return (
       <div className="h-screen bg-background flex items-center justify-center">
@@ -169,7 +143,7 @@ export function EditorPage() {
   
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
-      <header className="h-16 bg-surface border-b border-border flex items-center justify-between px-4 flex-shrink-0">
+      <header className="h-14 bg-surface border-b border-border flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center gap-4">
           <Link
             to="/dashboard"
@@ -179,7 +153,7 @@ export function EditorPage() {
             <span className="text-sm font-medium">Back</span>
           </Link>
           
-          <div className="h-8 w-px bg-border" />
+          <div className="h-6 w-px bg-border" />
           
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
@@ -190,52 +164,30 @@ export function EditorPage() {
                 {project?.name}
                 {isDirty && <span className="w-2 h-2 bg-amber-500 rounded-full" />}
               </h1>
-              <p className="text-xs text-text-muted">
-                {slides.length} slides • {slides[0]?.layers.length || 0} elements
-              </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-surface border border-border rounded-xl p-1">
-          <button
-            onClick={() => {}}
-            className="p-2.5 rounded-lg bg-emerald-500 text-white"
-            title="Select"
-          >
-            <Check className="w-4 h-4" />
-          </button>
+        <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1">
           <button
             onClick={undo}
             disabled={historyIndex <= 0}
-            className="p-2.5 rounded-lg text-text-secondary hover:bg-background disabled:opacity-30 transition-colors"
+            className="p-2 rounded text-text-secondary hover:bg-background disabled:opacity-30 transition-colors"
             title="Undo (⌘Z)"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
           <button
             onClick={() => currentSlideId && duplicateSlide(currentSlideId)}
-            className="p-2.5 rounded-lg text-text-secondary hover:bg-background transition-colors"
+            className="p-2 rounded text-text-secondary hover:bg-background transition-colors"
             title="Duplicate (⌘D)"
           >
             <Copy className="w-4 h-4" />
           </button>
           <button
-            className="p-2.5 rounded-lg text-text-secondary hover:bg-background transition-colors"
-            title="Crop"
-          >
-            <Crop className="w-4 h-4" />
-          </button>
-          <button
-            className="p-2.5 rounded-lg text-text-secondary hover:bg-background transition-colors"
-            title="Lock"
-          >
-            <Lock className="w-4 h-4" />
-          </button>
-          <button
             onClick={() => currentSlideId && slides.length > 1 && deleteSlide(currentSlideId)}
             disabled={slides.length <= 1}
-            className="p-2.5 rounded-lg text-red-400 hover:bg-red-500/10 disabled:opacity-30 transition-colors"
+            className="p-2 rounded text-red-400 hover:bg-red-500/10 disabled:opacity-30 transition-colors"
             title="Delete"
           >
             <Trash2 className="w-4 h-4" />
@@ -243,31 +195,6 @@ export function EditorPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-surface border border-border rounded-lg p-1">
-            <button
-              onClick={() => setDevicePreview('iphone')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                devicePreview === 'iphone' 
-                  ? 'bg-emerald-500 text-white' 
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              iOS
-            </button>
-            <button
-              onClick={() => setDevicePreview('android')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                devicePreview === 'android' 
-                  ? 'bg-emerald-500 text-white' 
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              Android
-            </button>
-          </div>
-
-          <div className="h-8 w-px bg-border" />
-
           <button
             onClick={handleSave}
             disabled={isSaving || !isDirty}
@@ -281,11 +208,6 @@ export function EditorPage() {
             Save
           </button>
 
-          <button className="px-4 py-2 bg-surface border border-border rounded-lg text-sm font-medium text-text-primary hover:bg-border transition-colors flex items-center gap-2">
-            <Eye className="w-4 h-4" />
-            Preview
-          </button>
-
           <Link
             to={`/export/${projectId}`}
             className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
@@ -296,67 +218,17 @@ export function EditorPage() {
         </div>
       </header>
 
-      <div className="h-12 bg-surface border-b border-border flex items-center px-4 gap-6">
-        <button className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors flex items-center gap-2">
-          ⚙️ Setup
-        </button>
-        <button className="px-4 py-2 text-sm font-medium text-emerald-500 border-b-2 border-emerald-500 -mb-px flex items-center gap-2">
-          🖼️ Background
-        </button>
-        <button className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors flex items-center gap-2">
-          🌍 Localise
-        </button>
-        <button className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors flex items-center gap-2">
-          📱 App Screens
-        </button>
-        
-        <div className="flex-1" />
-        
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-          <Smartphone className="w-4 h-4 text-emerald-500" />
-          <span className="text-sm font-medium text-emerald-600">
-            {devicePreview === 'iphone' ? 'iOS Phones - 6.9"' : 'Android - 1080p'}
-          </span>
-          <ChevronRight className="w-4 h-4 text-emerald-500" />
-        </div>
-      </div>
-
       <div className="flex-1 flex overflow-hidden">
         <ElementsPanel />
 
-        <div className="flex-1 bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden relative flex flex-col">
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-4">
-            <button
-              onClick={() => scrollToSlide('left')}
-              className="p-2 bg-white shadow-lg rounded-full hover:bg-slate-50 transition-colors disabled:opacity-30"
-              disabled={currentSlideIndex <= 0}
-            >
-              <ChevronLeft className="w-5 h-5 text-text-primary" />
-            </button>
-            <span className="px-4 py-2 bg-white shadow-lg rounded-full text-sm font-medium text-text-primary">
-              {currentSlideIndex + 1} / {slides.length}
-            </span>
-            <button
-              onClick={() => scrollToSlide('right')}
-              className="p-2 bg-white shadow-lg rounded-full hover:bg-slate-50 transition-colors disabled:opacity-30"
-              disabled={currentSlideIndex >= slides.length - 1}
-            >
-              <ChevronRight className="w-5 h-5 text-text-primary" />
-            </button>
-          </div>
-
+        <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden relative flex flex-col">
           <div
-            ref={scrollContainerRef}
             className="flex-1 flex items-center gap-8 px-8 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide"
-            style={{ 
-              paddingTop: '60px',
-              paddingBottom: '20px',
-            }}
           >
             {slides.map((slide, index) => (
               <div 
                 key={slide.id} 
-                className="snap-center flex-shrink-0 h-[calc(100%-40px)]"
+                className="snap-center flex-shrink-0 h-[calc(100%-30px)]"
                 style={{ minWidth: 'fit-content' }}
               >
                 <TemplateSlide
@@ -368,46 +240,19 @@ export function EditorPage() {
               </div>
             ))}
 
-            <div className="snap-center flex-shrink-0 h-[calc(100%-40px)] flex items-center">
+            <div className="snap-center flex-shrink-0 h-[calc(100%-30px)] flex items-center">
               <button
                 onClick={addSlide}
-                className="h-full aspect-[9/19.5] rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-500/5 transition-all flex flex-col items-center justify-center gap-3 group"
+                className="h-full aspect-[9/19.5] rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-500/5 transition-all flex flex-col items-center justify-center gap-2 group"
               >
-                <div className="p-4 bg-slate-100 group-hover:bg-emerald-500/10 rounded-full transition-colors">
-                  <Plus className="w-8 h-8 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                <div className="p-3 bg-slate-100 group-hover:bg-emerald-500/10 rounded-full transition-colors">
+                  <Plus className="w-6 h-6 text-slate-400 group-hover:text-emerald-500 transition-colors" />
                 </div>
-                <span className="text-sm font-medium text-slate-400 group-hover:text-emerald-500 transition-colors">
+                <span className="text-xs font-medium text-slate-400 group-hover:text-emerald-500 transition-colors">
                   Add Slide
                 </span>
               </button>
             </div>
-          </div>
-
-          <div className="h-20 bg-white border-t border-border flex items-center px-4 gap-2 overflow-x-auto">
-            {slides.map((slide, index) => (
-              <button
-                key={slide.id}
-                onClick={() => setCurrentSlideId(slide.id)}
-                className={`
-                  flex-shrink-0 h-14 aspect-[9/19.5] rounded-lg overflow-hidden border-2 transition-all
-                  ${slide.id === currentSlideId 
-                    ? 'border-emerald-500 shadow-lg shadow-emerald-500/20' 
-                    : 'border-transparent hover:border-slate-300'
-                  }
-                `}
-                style={{ backgroundColor: slide.canvas.backgroundColor }}
-              >
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-[8px] font-medium text-slate-600">{index + 1}</span>
-                </div>
-              </button>
-            ))}
-            <button
-              onClick={addSlide}
-              className="flex-shrink-0 h-14 aspect-[9/19.5] rounded-lg border-2 border-dashed border-slate-200 hover:border-emerald-500 flex items-center justify-center transition-colors"
-            >
-              <Plus className="w-4 h-4 text-slate-400" />
-            </button>
           </div>
         </div>
 
