@@ -66,7 +66,6 @@ interface EditorState {
   }
   setDeviceFrame: (frame: Partial<EditorState['deviceFrame']>) => void
   
-  // Reset
   reset: () => void
   initialize: (canvas: CanvasConfig, layers: LayerConfig[], images: ImageAsset[], exportSizes: ExportSize[], savedSlides?: SlideData[]) => void
 }
