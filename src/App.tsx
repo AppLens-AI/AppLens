@@ -23,7 +23,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public routes */}
         <Route element={<AuthLayout />}>
           <Route
             path="/login"
@@ -43,7 +42,6 @@ export default function App() {
           />
         </Route>
 
-        {/* Protected routes */}
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/templates" element={<TemplatesPage />} />
@@ -51,7 +49,6 @@ export default function App() {
           <Route path="/export/:projectId" element={<ExportPage />} />
         </Route>
 
-        {/* Redirect */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
