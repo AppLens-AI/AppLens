@@ -114,7 +114,7 @@ export default function ExportPage() {
     const anchorX = props.anchorX || 'center'
     const anchorY = props.anchorY || 'center'
     const offsetX = props.offsetX || 0
-    const offsetY = props.offsetY || layer.y
+    const offsetY = props.offsetY !== undefined ? props.offsetY : 0
     const imgScale = props.scale || 1
 
     const isFullBackground = layer.type === 'shape' && 
@@ -168,7 +168,8 @@ export default function ExportPage() {
         break
       case 'center':
       default:
-        y = (layer.y / canvas.height) * exportSize.height
+        // Use offsetY as absolute position from top
+        y = offsetY * scaleY
         if (layer.type !== 'text') y -= height / 2
         break
     }
