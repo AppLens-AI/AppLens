@@ -48,6 +48,7 @@ export default function ElementsPanel() {
     setSelectedLayerId,
     updateLayer,
     deleteLayer,
+    addLayer,
   } = useEditorStore()
 
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -70,7 +71,151 @@ export default function ElementsPanel() {
     }
   }
 
-  const handleAddElement = () => {
+  const handleAddElement = (elementType: string) => {
+    if (!currentSlideId) return
+
+    const currentSlide = slides.find(s => s.id === currentSlideId)
+    if (!currentSlide) return
+
+    const maxZIndex = currentSlide.layers.length > 0 
+      ? Math.max(...currentSlide.layers.map(l => l.zIndex))
+      : 0
+
+    const newLayerId = `layer-${Date.now()}`
+    let newLayer: any
+
+    switch (elementType) {
+      case 'text':
+        newLayer = {
+          id: newLayerId,
+          type: 'text',
+          name: 'Text',
+          x: currentSlide.canvas.width / 2,
+          y: currentSlide.canvas.height / 2,
+          width: 400,
+          height: 60,
+          rotation: 0,
+          visible: true,
+          locked: false,
+          opacity: 1,
+          zIndex: maxZIndex + 1,
+          properties: {
+            content: 'New Text',
+            fontFamily: 'Inter',
+            fontSize: 48,
+            fontWeight: '700',
+            color: '#000000',
+            align: 'center',
+            lineHeight: 1.2,
+            position: 'center',
+            anchorX: 'center',
+            anchorY: 'center',
+            offsetX: 0,
+            offsetY: 0,
+          }
+        }
+        break
+
+      case 'image':
+        newLayer = {
+          id: newLayerId,
+          type: 'image',
+          name: 'Image',
+          x: currentSlide.canvas.width / 2,
+          y: currentSlide.canvas.height / 2,
+          width: 300,
+          height: 300,
+          rotation: 0,
+          visible: true,
+          locked: false,
+          opacity: 1,
+          zIndex: maxZIndex + 1,
+          properties: {
+            src: '',
+            placeholder: '',
+            borderRadius: 12,
+            shadow: true,
+            shadowBlur: 20,
+            shadowColor: 'rgba(0,0,0,0.25)',
+            shadowOffsetX: 0,
+            shadowOffsetY: 4,
+            position: 'center',
+            anchorX: 'center',
+            anchorY: 'center',
+            offsetX: 0,
+            offsetY: 0,
+            scale: 1,
+          }
+        }
+        break
+
+      case 'screenshot':
+        newLayer = {
+          id: newLayerId,
+          type: 'screenshot',
+          name: 'Screenshot',
+          x: currentSlide.canvas.width / 2,
+          y: currentSlide.canvas.height / 2,
+          width: 300,
+          height: 600,
+          rotation: 0,
+          visible: true,
+          locked: false,
+          opacity: 1,
+          zIndex: maxZIndex + 1,
+          properties: {
+            src: '',
+            placeholder: '',
+            borderRadius: 24,
+            shadow: true,
+            shadowBlur: 30,
+            shadowColor: 'rgba(0,0,0,0.3)',
+            shadowOffsetX: 0,
+            shadowOffsetY: 8,
+            position: 'center',
+            anchorX: 'center',
+            anchorY: 'center',
+            offsetX: 0,
+            offsetY: 0,
+            scale: 1,
+          }
+        }
+        break
+
+      case 'shape':
+        newLayer = {
+          id: newLayerId,
+          type: 'shape',
+          name: 'Shape',
+          x: currentSlide.canvas.width / 2,
+          y: currentSlide.canvas.height / 2,
+          width: 200,
+          height: 200,
+          rotation: 0,
+          visible: true,
+          locked: false,
+          opacity: 1,
+          zIndex: maxZIndex + 1,
+          properties: {
+            fill: '#4ADE80',
+            stroke: '',
+            strokeWidth: 0,
+            cornerRadius: 12,
+            shapeType: 'rounded',
+            position: 'center',
+            anchorX: 'center',
+            anchorY: 'center',
+            offsetX: 0,
+            offsetY: 0,
+          }
+        }
+        break
+
+      default:
+        return
+    }
+
+    addLayer(currentSlideId, newLayer)
     setIsModalOpen(false)
   }
 
@@ -255,7 +400,7 @@ export default function ElementsPanel() {
                   return (
                     <button
                       key={el.type}
-                      onClick={() => handleAddElement()}
+                      onClick={() => handleAddElement(el.type)}
                       className={`
                         flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-border/50
                         transition-all duration-200 ease-out
