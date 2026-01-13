@@ -92,11 +92,9 @@ const HeroSection = () => {
       onMouseMove={handleMouseMove}
       className="relative min-h-screen flex items-center justify-center overflow-hidden px-4"
     >
-      {/* Background gradient effects */}
       <div className="absolute inset-0 bg-gradient-to-b from-emerald-dark/20 via-transparent to-transparent" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/10 rounded-full blur-[120px]" />
       
-      {/* Floating shapes */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.6 }}
@@ -110,7 +108,6 @@ const HeroSection = () => {
         className="absolute bottom-40 right-[15%] w-32 h-32 bg-primary/15 rounded-full blur-2xl floating-shape-slow"
       />
 
-      {/* Floating screens */}
       <FloatingScreen 
         className="absolute top-[20%] left-[5%] w-48 md:w-64 opacity-60" 
         delay={0.5} 
@@ -140,7 +137,6 @@ const HeroSection = () => {
         intensity={0.8}
       />
 
-      {/* Hero content */}
       <div className="relative z-10 text-center max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
