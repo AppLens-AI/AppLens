@@ -61,7 +61,6 @@ const CTASection = () => {
       ref={ref}
       className="py-32 px-4 relative overflow-hidden"
     >
-      {/* Animated gradient background */}
       <motion.div 
         className="absolute inset-0"
         animate={{
@@ -75,7 +74,6 @@ const CTASection = () => {
         transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
       />
 
-      {/* Floating shapes */}
       <motion.div style={{ x: x1, y: y1 }} className="absolute top-20 left-[10%]">
         <FloatingShape 
           className="rounded-full border-2 border-primary/30" 
@@ -119,7 +117,6 @@ const CTASection = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="text-center"
         >
-          {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -182,7 +179,6 @@ const CTASection = () => {
             </Button>
           </motion.div>
 
-          {/* Trust indicators */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : {}}

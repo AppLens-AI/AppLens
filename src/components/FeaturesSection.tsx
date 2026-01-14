@@ -58,14 +58,12 @@ const FeatureCard = ({ feature, index }: { feature: typeof features[0]; index: n
       className="group"
     >
       <div className="glass-card p-8 h-full relative overflow-hidden">
-        {/* Glow effect on hover */}
         <motion.div
           initial={{ opacity: 0 }}
           whileHover={{ opacity: 1 }}
           className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none"
         />
         
-        {/* Icon container */}
         <motion.div
           whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
           transition={{ duration: 0.5 }}
@@ -82,7 +80,6 @@ const FeatureCard = ({ feature, index }: { feature: typeof features[0]; index: n
           {feature.description}
         </p>
 
-        {/* Animated border on hover */}
         <motion.div
           initial={{ scaleX: 0 }}
           whileHover={{ scaleX: 1 }}
@@ -100,7 +97,6 @@ const FeaturesSection = () => {
 
   return (
     <section className="py-32 px-4 relative" ref={ref}>
-      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-subtle/30 to-transparent" />
 
       <div className="container max-w-6xl mx-auto relative z-10">
