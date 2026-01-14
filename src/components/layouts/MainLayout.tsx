@@ -49,9 +49,19 @@ export default function MainLayout() {
         <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link to="/dashboard" className="flex items-center gap-2.5 group">
-              <div className="flex items-center gap-3 mb-8 animate-slide-up opacity-0 stagger-1" style={{ marginTop: 35 }}>
-                <img src="/logo.png" alt="Logo" className="w-20 h-20 hidden sm:block" style={{marginLeft: -20, marginRight: -14, }}/>
-                <span className="text-3xl font-bold text-foreground">Shotify</span>
+              <div
+                className="flex items-center gap-3 mb-8 animate-slide-up opacity-0 stagger-1"
+                style={{ marginTop: 35 }}
+              >
+                <img
+                  src="/logo.png"
+                  alt="Logo"
+                  className="w-20 h-20 hidden sm:block"
+                  style={{ marginLeft: -20, marginRight: -14 }}
+                />
+                <span className="text-3xl font-bold text-foreground">
+                  Shotify
+                </span>
               </div>
             </Link>
 
