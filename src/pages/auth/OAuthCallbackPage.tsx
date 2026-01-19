@@ -91,20 +91,5 @@ export default function OAuthCallbackPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <div className="w-16 h-16 mx-auto mb-4 relative">
-          <div className="absolute inset-0 rounded-full border-4 border-primary/20"></div>
-          <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-        </div>
-        <h2 className="text-xl font-semibold text-foreground mb-2">
-          Completing sign in...
-        </h2>
-        <p className="text-muted-foreground">
-          Please wait while we verify your account
-        </p>
-      </div>
-    </div>
-  );
+  return null
 }
