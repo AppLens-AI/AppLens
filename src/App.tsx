@@ -10,6 +10,7 @@ import AuthLayout from "./components/layouts/AuthLayout";
 import MainLayout from "./components/layouts/MainLayout";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import OAuthCallbackPage from "./pages/auth/OAuthCallbackPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import TemplatesPage from "./pages/templates/TemplatesPage";
 import { EditorPage } from "./pages/editor/EditorPage";
@@ -60,6 +61,7 @@ const App = () => (
               </PublicRoute>
             }
           />
+          <Route path="/auth/callback" element={<OAuthCallbackPage />} />
         </Route>
 
           <Route
