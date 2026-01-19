@@ -17,34 +17,47 @@ const Navbar = () => {
       <div className="container max-w-6xl mx-auto">
         <div className="glass-card px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Logo" className="w-10 h-10 hidden sm:block" />
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-10 h-10 hidden sm:block"
+            />
             <span className="font-display font-bold text-xl text-foreground">
               Shotify
             </span>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+            <a
+              href="#features"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
               Features
             </a>
-            <a href="#templates" className="text-muted-foreground hover:text-foreground transition-colors">
+            <a
+              href="#templates"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
               Templates
-            </a>
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-              Pricing
             </a>
           </div>
 
           <div className="hidden md:flex items-center gap-4">
-            <Link to="/login" className="text-muted-foreground hover:text-foreground">
+            <Link
+              to="/login"
+              className="text-muted-foreground hover:text-foreground"
+            >
               Sign In
             </Link>
-            <Link to="/register" className="bg-primary px-4 py-2 hover:bg-primary/90 text-primary-foreground rounded-xl">
+            <Link
+              to="/register"
+              className="bg-primary px-4 py-2 hover:bg-primary/90 text-primary-foreground rounded-xl"
+            >
               Start Free
             </Link>
           </div>
 
-          <button 
+          <button
             className="md:hidden text-foreground"
             onClick={() => setIsOpen(!isOpen)}
           >
@@ -59,22 +72,31 @@ const Navbar = () => {
             className="md:hidden glass-card mt-2 p-4"
           >
             <div className="flex flex-col gap-4">
-              <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors py-2">
+              <a
+                href="#features"
+                className="text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
                 Features
               </a>
-              <a href="#templates" className="text-muted-foreground hover:text-foreground transition-colors py-2">
+              <a
+                href="#templates"
+                className="text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
                 Templates
               </a>
-              <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors py-2">
-                Pricing
-              </a>
               <hr className="border-border/50" />
-              <Button variant="ghost" className="justify-start text-muted-foreground">
+              <Link
+                to="/login"
+                className="text-muted-foreground hover:text-foreground"
+              >
                 Sign In
-              </Button>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
+              </Link>
+              <Link
+                to="/register"
+                className="bg-primary px-4 py-2 hover:bg-primary/90 text-primary-foreground rounded-xl"
+              >
                 Start Free
-              </Button>
+              </Link>
             </div>
           </motion.div>
         )}
