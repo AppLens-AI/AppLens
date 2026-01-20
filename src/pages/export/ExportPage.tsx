@@ -157,8 +157,15 @@ export default function ExportPage() {
       };
     }
 
-    const width = layer.width * scaleX * imgScale;
-    const height = layer.height * scaleY * imgScale;
+    const isImage = layer.type === "image" || layer.type === "screenshot";
+    const uniformScale = Math.min(scaleX, scaleY);
+    
+    const width = isImage 
+      ? layer.width * uniformScale * imgScale 
+      : layer.width * scaleX * imgScale;
+    const height = isImage 
+      ? layer.height * uniformScale * imgScale 
+      : layer.height * scaleY * imgScale;
 
     let x: number;
     switch (anchorX) {
@@ -320,36 +327,57 @@ export default function ExportPage() {
           const hasValidImage = img && img.complete && img.naturalWidth > 0;
           const borderRadius = (props.borderRadius || 0) * scale;
 
+          const outerGroup = new Konva.Group({
+            x: pos.x + pos.width / 2,
+            y: pos.y + pos.height / 2,
+            rotation: layerConfig.rotation,
+            opacity: layerConfig.opacity,
+          });
+
           if (props.shadow) {
+            const shadowOffsetX = (props.shadowOffsetX || 0) * scale;
+            const shadowOffsetY = (props.shadowOffsetY || 4) * scale;
+            const shadowBlur = Math.max((props.shadowBlur || 20) * scale, 1);
+            
+            let shadowOpacity = 0.25;
+            if (props.shadowColor) {
+              const rgbaMatch = props.shadowColor.match(/rgba?\([^)]+,\s*([\d.]+)\s*\)/);
+              if (rgbaMatch) {
+                shadowOpacity = parseFloat(rgbaMatch[1]);
+              }
+            }
+
+            const blurPadding = shadowBlur * 3;
+
             const shadowRect = new Konva.Rect({
-              x: pos.x + pos.width / 2 + (props.shadowOffsetX || 0) * scale,
-              y: pos.y + pos.height / 2 + (props.shadowOffsetY || 4) * scale,
+              x: -pos.width / 2 + shadowOffsetX,
+              y: -pos.height / 2 + shadowOffsetY,
               width: pos.width,
               height: pos.height,
               fill: "black",
               cornerRadius: borderRadius,
-              opacity: 0.3,
-              offsetX: pos.width / 2,
-              offsetY: pos.height / 2,
+              opacity: shadowOpacity,
             });
             shadowRect.filters([Konva.Filters.Blur]);
-            shadowRect.blurRadius((props.shadowBlur || 20) * scale);
-            shadowRect.cache();
-            layer.add(shadowRect);
+            shadowRect.blurRadius(shadowBlur);
+            
+            shadowRect.cache({
+              x: -blurPadding,
+              y: -blurPadding,
+              width: pos.width + blurPadding * 2,
+              height: pos.height + blurPadding * 2,
+            });
+            outerGroup.add(shadowRect);
           }
 
           if (hasValidImage) {
-            const group = new Konva.Group({
-              x: pos.x + pos.width / 2,
-              y: pos.y + pos.height / 2,
-              offsetX: pos.width / 2,
-              offsetY: pos.height / 2,
-              rotation: layerConfig.rotation,
-              opacity: layerConfig.opacity,
+            const imageGroup = new Konva.Group({
+              x: -pos.width / 2,
+              y: -pos.height / 2,
             });
 
             if (borderRadius > 0) {
-              group.clipFunc((ctx) => {
+              imageGroup.clipFunc((ctx) => {
                 ctx.beginPath();
                 ctx.moveTo(borderRadius, 0);
                 ctx.lineTo(pos.width - borderRadius, 0);
@@ -376,7 +404,7 @@ export default function ExportPage() {
               });
             }
 
-            group.add(
+            imageGroup.add(
               new Konva.Image({
                 x: 0,
                 y: 0,
@@ -385,23 +413,21 @@ export default function ExportPage() {
                 image: img,
               })
             );
-            layer.add(group);
+            outerGroup.add(imageGroup);
           } else {
-            layer.add(
+            outerGroup.add(
               new Konva.Rect({
-                x: pos.x + pos.width / 2,
-                y: pos.y + pos.height / 2,
+                x: -pos.width / 2,
+                y: -pos.height / 2,
                 width: pos.width,
                 height: pos.height,
                 fill: "#e2e8f0",
                 cornerRadius: borderRadius,
-                opacity: layerConfig.opacity,
-                rotation: layerConfig.rotation,
-                offsetX: pos.width / 2,
-                offsetY: pos.height / 2,
               })
             );
           }
+          
+          layer.add(outerGroup);
         }
       }
 
