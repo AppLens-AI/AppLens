@@ -46,7 +46,7 @@ export default function RegisterPage() {
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
       setError(
-        error.response?.data?.error || "Registration failed. Please try again."
+        error.response?.data?.error || "Registration failed. Please try again.",
       );
     } finally {
       setIsLoading(false);

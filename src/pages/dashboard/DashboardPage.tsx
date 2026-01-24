@@ -58,7 +58,7 @@ export default function DashboardPage() {
   };
 
   const filteredProjects = projects.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -132,7 +132,7 @@ export default function DashboardPage() {
                       projects.filter(
                         (p) =>
                           new Date(p.updatedAt) >
-                          new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                          new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
                       ).length
                     }
                   </p>
@@ -212,7 +212,7 @@ export default function DashboardPage() {
                           onClick={(e) => {
                             e.stopPropagation();
                             setMenuOpenId(
-                              menuOpenId === project.id ? null : project.id
+                              menuOpenId === project.id ? null : project.id,
                             );
                           }}
                           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"

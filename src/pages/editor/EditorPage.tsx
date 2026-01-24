@@ -62,7 +62,7 @@ export function EditorPage() {
           data.projectConfig.layers,
           data.projectConfig.images || [],
           exports,
-          slides
+          slides,
         );
       } catch (error) {
         console.error("Failed to fetch project:", error);
