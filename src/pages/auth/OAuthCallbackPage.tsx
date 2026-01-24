@@ -5,7 +5,7 @@ import { authApi } from "@/lib/api";
 
 /**
  * OAuth Callback Page
- * 
+ *
  * This page handles the redirect from OAuth providers.
  * The backend sets a short-lived cookie with the JWT token,
  * which this page reads to complete the authentication.
@@ -19,7 +19,7 @@ export default function OAuthCallbackPage() {
     const handleCallback = async () => {
       try {
         const token = getCookie("auth_token");
-        
+
         if (!token) {
           throw new Error("No authentication token received");
         }
@@ -37,7 +37,7 @@ export default function OAuthCallbackPage() {
       } catch (err) {
         console.error("OAuth callback error:", err);
         setError("Authentication failed. Please try again.");
-        
+
         setTimeout(() => {
           navigate("/login?error=Authentication failed", { replace: true });
         }, 2000);
@@ -91,5 +91,5 @@ export default function OAuthCallbackPage() {
     );
   }
 
-  return null
+  return null;
 }

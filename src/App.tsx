@@ -18,21 +18,21 @@ import ExportPage from "./pages/export/ExportPage";
 
 const queryClient = new QueryClient();
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated } = useAuthStore();
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" replace />;
   }
-  return <>{children}</>
+  return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
-  
+  const { isAuthenticated } = useAuthStore();
+
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/dashboard" replace />;
   }
-  
-  return <>{children}</>
+
+  return <>{children}</>;
 }
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -45,24 +45,24 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
 
           <Route element={<AuthLayout />}>
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <LoginPage />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <PublicRoute>
-                <RegisterPage />
-              </PublicRoute>
-            }
-          />
-          <Route path="/auth/callback" element={<OAuthCallbackPage />} />
-        </Route>
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <LoginPage />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <PublicRoute>
+                  <RegisterPage />
+                </PublicRoute>
+              }
+            />
+            <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+          </Route>
 
           <Route
             element={

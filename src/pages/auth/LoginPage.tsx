@@ -4,7 +4,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { authApi } from "@/lib/api";
 import { Eye, EyeOff, Loader2, ArrowRight, Check } from "lucide-react";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
+const API_BASE_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
 
 export default function LoginPage() {
   const navigate = useNavigate();
