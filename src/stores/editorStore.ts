@@ -38,6 +38,7 @@ interface EditorState {
     slideId: string,
     layerId: string,
     updates: Partial<LayerConfig>,
+    options?: { pushToHistory?: boolean },
   ) => void;
   deleteLayer: (slideId: string, layerId: string) => void;
   addLayer: (slideId: string, layer: LayerConfig) => void;
@@ -187,9 +188,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return slides.find((s) => s.id === currentSlideId);
   },
 
-  updateLayer: (slideId, layerId, updates) => {
+  updateLayer: (slideId, layerId, updates, options) => {
     const { slides, pushHistory } = get();
-    pushHistory();
+    const shouldPushHistory = options?.pushToHistory !== false;
+
+    if (shouldPushHistory) {
+      pushHistory();
+    }
 
     set({
       slides: slides.map((slide) => {
