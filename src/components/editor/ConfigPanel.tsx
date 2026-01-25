@@ -160,6 +160,7 @@ function SliderInput({
   step?: number;
   suffix?: string;
 }) {
+  const displayValue = Math.round(value * 100) / 100;
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -167,7 +168,7 @@ function SliderInput({
           {label}
         </label>
         <span className="text-xs text-text-secondary font-medium">
-          {value}
+          {displayValue}
           {suffix}
         </span>
       </div>
