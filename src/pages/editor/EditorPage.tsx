@@ -230,7 +230,7 @@ export function EditorPage() {
         <ElementsPanel />
 
         <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden relative flex flex-col">
-          <div className="flex-1 flex items-center gap-8 px-8 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide">
+          <div className="flex-1 flex items-center gap-2 px-8 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide">
             {slides.map((slide, index) => (
               <div
                 key={slide.id}

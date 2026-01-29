@@ -697,7 +697,7 @@ export default function TemplateSlide({
           transition-all duration-200
           ${
             isActive
-              ? "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background shadow-xl shadow-emerald-500/20"
+              ? "ring-2 ring-emerald-500 ring-offset-2 shadow-xl shadow-emerald-500/20"
               : "ring-1 ring-border hover:ring-2 hover:ring-emerald-400/50 hover:shadow-lg"
           }
         `}
