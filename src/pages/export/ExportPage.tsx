@@ -9,8 +9,10 @@ import type {
   ExportSize,
   CanvasConfig,
   LayerConfig,
+  DeviceConfigMap,
+  SlideData,
 } from "@/types";
-import { normalizeLayerProperties } from "@/lib/layerUtils";
+import { normalizeLayerProperties, normalizeLayers } from "@/lib/layerUtils";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import {
@@ -39,6 +41,7 @@ export default function ExportPage() {
     Map<string, HTMLImageElement>
   >(new Map());
   const [exportComplete, setExportComplete] = useState(false);
+  const [deviceConfigs, setDeviceConfigs] = useState<DeviceConfigMap>({});
 
   useEffect(() => {
     if (!projectId) return;
@@ -54,14 +57,34 @@ export default function ExportPage() {
           new Set(sizes.map((s) => `${s.name}-${s.width}x${s.height}`)),
         );
 
-        const slides = data.projectConfig.slides || [
+        if (data.projectConfig.deviceConfigs) {
+          setDeviceConfigs(data.projectConfig.deviceConfigs);
+        }
+
+        const allSlides: SlideData[] = [];
+        
+        const baseSlides = data.projectConfig.slides || [
           {
             id: "default",
             canvas: data.projectConfig.canvas,
             layers: data.projectConfig.layers,
           },
         ];
-        const imageUrls = slides
+        allSlides.push(...baseSlides);
+        
+        if (data.projectConfig.deviceConfigs) {
+          Object.values(data.projectConfig.deviceConfigs).forEach(config => {
+            if (config.slides) {
+              allSlides.push(...config.slides.map(s => ({
+                id: s.id,
+                canvas: s.canvas,
+                layers: s.layers,
+              })));
+            }
+          });
+        }
+
+        const imageUrls = allSlides
           .flatMap((slide) =>
             slide.layers
               .filter((l) => l.type === "image" || l.type === "screenshot")
@@ -493,6 +516,28 @@ export default function ExportPage() {
     return `${rootFolder}/${deviceFolder}/${filename}`;
   };
 
+  const getSlidesForExportSize = (exportSize: ExportSize): SlideData[] => {
+    const deviceKey = `${exportSize.name}-${exportSize.width}x${exportSize.height}`;
+    
+    if (deviceConfigs[deviceKey]?.isModified && deviceConfigs[deviceKey]?.slides) {
+      return deviceConfigs[deviceKey].slides.map(s => ({
+        id: s.id,
+        canvas: s.canvas,
+        layers: normalizeLayers(s.layers),
+      }));
+    }
+    
+    const baseSlides = project?.projectConfig.slides || [
+      {
+        id: "default",
+        canvas: project?.projectConfig.canvas || { width: 1242, height: 2688, backgroundColor: "#D8E5D8" },
+        layers: project?.projectConfig.layers || [],
+      },
+    ];
+    
+    return baseSlides;
+  };
+
   const handleExport = async () => {
     if (!project || selectedSizes.size === 0) return;
 
@@ -505,22 +550,30 @@ export default function ExportPage() {
       selectedSizes.has(`${s.name}-${s.width}x${s.height}`),
     );
 
-    const slides = project.projectConfig.slides || [
-      {
-        id: "default",
-        canvas: project.projectConfig.canvas,
-        layers: project.projectConfig.layers,
-      },
-    ];
+    let totalOperations = 0;
+    const exportSlidesMap = new Map<string, SlideData[]>();
+    
+    for (const exportSize of selectedExports) {
+      const deviceKey = `${exportSize.name}-${exportSize.width}x${exportSize.height}`;
+      const slides = getSlidesForExportSize(exportSize);
+      exportSlidesMap.set(deviceKey, slides);
+      totalOperations += slides.length;
+    }
 
-    const totalOperations = selectedExports.length * slides.length;
     let completed = 0;
 
-    for (let slideIndex = 0; slideIndex < slides.length; slideIndex++) {
-      const slide = slides[slideIndex];
+    for (const exportSize of selectedExports) {
+      const deviceKey = `${exportSize.name}-${exportSize.width}x${exportSize.height}`;
+      const slides = exportSlidesMap.get(deviceKey) || [];
+      const isDeviceModified = deviceConfigs[deviceKey]?.isModified;
 
-      for (const exportSize of selectedExports) {
-        const blob = await renderSlide(slide.canvas, slide.layers, exportSize);
+      for (let slideIndex = 0; slideIndex < slides.length; slideIndex++) {
+        const slide = slides[slideIndex];
+        
+        const slideCanvas = isDeviceModified ? slide.canvas : slide.canvas;
+        const slideLayers = normalizeLayers(slide.layers);
+
+        const blob = await renderSlide(slideCanvas, slideLayers, exportSize);
         if (blob) {
           const filepath = buildExportPath(exportSize, slideIndex);
           zip.file(filepath, blob);
@@ -562,14 +615,15 @@ export default function ExportPage() {
   const exportSizes = project?.template?.jsonConfig.exports || [];
   const iosSizes = exportSizes.filter((s) => s.platform === "ios");
   const androidSizes = exportSizes.filter((s) => s.platform === "android");
-  const slides = project?.projectConfig.slides || [
+  const baseSlides = project?.projectConfig.slides || [
     {
       id: "default",
       canvas: project?.projectConfig.canvas,
       layers: project?.projectConfig.layers,
     },
   ];
-  const totalImages = selectedSizes.size * slides.length;
+  const slidesCount = baseSlides.length;
+  const totalImages = selectedSizes.size * slidesCount;
 
   return (
     <div className="min-h-screen bg-background">
@@ -620,7 +674,7 @@ export default function ExportPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="p-4 bg-secondary rounded-xl text-center">
                   <p className="text-3xl font-bold text-foreground">
-                    {slides.length}
+                    {slidesCount}
                   </p>
                   <p className="text-sm text-muted-foreground">Slides</p>
                 </div>
