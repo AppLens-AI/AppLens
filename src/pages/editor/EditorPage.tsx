@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { projectsApi } from "@/lib/api";
 import { useEditorStore } from "@/stores/editorStore";
-import type { Project } from "@/types";
+import type { Project, ExportSize } from "@/types";
 import TemplateSlide from "@/components/editor/TemplateSlide";
 import ConfigPanel from "@/components/editor/ConfigPanel";
 import ElementsPanel from "@/components/editor/ElementsPanel";
@@ -15,11 +15,44 @@ import {
   Copy,
   Trash2,
   Plus,
+  Smartphone,
+  Tablet,
+  ChevronDown,
+  Check,
 } from "lucide-react";
+
+const getDeviceKey = (size: ExportSize) =>
+  `${size.name}-${size.width}x${size.height}`;
+
+const isTabletDevice = (size: ExportSize) => {
+  const nameLower = size.name.toLowerCase();
+  const minDim = Math.min(size.width, size.height);
+  const aspectRatio = Math.max(size.width, size.height) / Math.max(minDim, 1);
+  return (
+    nameLower.includes("ipad") ||
+    nameLower.includes("tablet") ||
+    (minDim >= 1200 && aspectRatio <= 1.9)
+  );
+};
+
+const DeviceIcon = ({
+  size,
+  className = "w-4 h-4",
+}: {
+  size: ExportSize;
+  className?: string;
+}) => {
+  return isTabletDevice(size) ? (
+    <Tablet className={className} />
+  ) : (
+    <Smartphone className={className} />
+  );
+};
 
 export function EditorPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const deviceDropdownRef = useRef<HTMLDivElement>(null);
 
   const {
     slides,
@@ -34,11 +67,23 @@ export function EditorPage() {
     duplicateSlide,
     deleteSlide,
     addSlide,
+    exportSizes,
+    selectedDeviceKey,
+    setSelectedDeviceKey,
+    deviceConfigs,
   } = useEditorStore();
 
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeviceDropdownOpen, setIsDeviceDropdownOpen] = useState(false);
+
+  const currentDevice = useMemo(() => {
+    if (!selectedDeviceKey) return null;
+    return (
+      exportSizes.find((s) => getDeviceKey(s) === selectedDeviceKey) || null
+    );
+  }, [selectedDeviceKey, exportSizes]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -53,7 +98,7 @@ export function EditorPage() {
         const exports = data.projectConfig.exports?.length
           ? data.projectConfig.exports
           : data.template?.jsonConfig.exports || [];
-        const slides = data.projectConfig.slides?.length
+        const projectSlides = data.projectConfig.slides?.length
           ? data.projectConfig.slides
           : data.template?.jsonConfig.slides || [];
 
@@ -62,7 +107,8 @@ export function EditorPage() {
           data.projectConfig.layers,
           data.projectConfig.images || [],
           exports,
-          slides,
+          projectSlides,
+          data.projectConfig.deviceConfigs,
         );
       } catch (error) {
         console.error("Failed to fetch project:", error);
@@ -75,26 +121,37 @@ export function EditorPage() {
     fetchProject();
   }, [projectId, navigate, initialize]);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        deviceDropdownRef.current &&
+        !deviceDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDeviceDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey) {
-        if (e.key === "z") {
-          e.preventDefault();
-          undo();
-        }
-        if (e.key === "s") {
-          e.preventDefault();
-          handleSave();
-        }
-        if (e.key === "d") {
-          e.preventDefault();
-          if (currentSlideId) {
-            duplicateSlide(currentSlideId);
-          }
-        }
-      }
-      if (e.key === "Escape") {
+      const isMod = e.metaKey || e.ctrlKey;
+
+      if (isMod && e.key === "z") {
+        e.preventDefault();
+        undo();
+      } else if (isMod && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      } else if (isMod && e.key === "d") {
+        e.preventDefault();
+        if (currentSlideId) duplicateSlide(currentSlideId);
+      } else if (e.key === "Escape") {
         setSelectedLayerId(null);
+        setIsDeviceDropdownOpen(false);
       }
     };
 
@@ -107,8 +164,31 @@ export function EditorPage() {
 
     setIsSaving(true);
     try {
-      const { slides, images } = useEditorStore.getState();
-      const slidesData = slides.map((slide) => ({
+      const state = useEditorStore.getState();
+      const {
+        slides: currentSlides,
+        images,
+        deviceConfigs: configs,
+        selectedDeviceKey: deviceKey,
+      } = state;
+
+      const updatedDeviceConfigs = { ...configs };
+      if (deviceKey && updatedDeviceConfigs[deviceKey]) {
+        updatedDeviceConfigs[deviceKey] = {
+          ...updatedDeviceConfigs[deviceKey],
+          slides: currentSlides.map((slide) => ({
+            id: slide.id,
+            canvas: { ...slide.canvas },
+            layers: slide.layers.map((l) => ({
+              ...l,
+              properties: { ...l.properties },
+            })),
+          })),
+          isModified: true,
+        };
+      }
+
+      const slidesData = currentSlides.map((slide) => ({
         id: slide.id,
         canvas: slide.canvas,
         layers: slide.layers,
@@ -116,14 +196,15 @@ export function EditorPage() {
 
       await projectsApi.update(project.id, {
         projectConfig: {
-          canvas: slides[0]?.canvas || {
+          canvas: currentSlides[0]?.canvas || {
             width: 1242,
             height: 2688,
             backgroundColor: "#D8E5D8",
           },
-          layers: slides[0]?.layers || [],
+          layers: currentSlides[0]?.layers || [],
           images,
           slides: slidesData,
+          deviceConfigs: updatedDeviceConfigs,
         },
       });
       setIsDirty(false);
@@ -133,6 +214,14 @@ export function EditorPage() {
       setIsSaving(false);
     }
   }, [project, isSaving, setIsDirty]);
+
+  const handleDeviceSelect = useCallback(
+    (deviceKey: string) => {
+      setSelectedDeviceKey(deviceKey);
+      setIsDeviceDropdownOpen(false);
+    },
+    [setSelectedDeviceKey],
+  );
 
   if (isLoading) {
     return (
@@ -203,6 +292,76 @@ export function EditorPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="relative" ref={deviceDropdownRef}>
+            <button
+              onClick={() => setIsDeviceDropdownOpen(!isDeviceDropdownOpen)}
+              className="px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm font-medium text-white hover:bg-slate-700 transition-colors flex items-center gap-2"
+            >
+              <DeviceIcon size={currentDevice} className="w-4 h-4" />
+              <span className="max-w-[120px] truncate">
+                {currentDevice?.name || "Select Device"}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${isDeviceDropdownOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {isDeviceDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 w-64 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="p-2 border-b border-slate-600">
+                  <p className="text-xs font-medium text-slate-400 px-2 py-1">
+                    Preview Device
+                  </p>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto p-2">
+                  {exportSizes.map((size) => {
+                    const key = getDeviceKey(size);
+                    const isSelected = selectedDeviceKey === key;
+                    const config = deviceConfigs[key];
+                    const isModified = config?.isModified;
+
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handleDeviceSelect(key)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                          isSelected
+                            ? "bg-emerald-500/20 text-emerald-400"
+                            : "hover:bg-slate-700 text-white"
+                        }`}
+                      >
+                        <div
+                          className={`p-1.5 rounded-lg ${isSelected ? "bg-emerald-500/20" : "bg-slate-700"}`}
+                        >
+                          <DeviceIcon size={size} className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium truncate">
+                              {size.name}
+                            </span>
+                            {isModified && (
+                              <span
+                                className="w-1.5 h-1.5 bg-amber-500 rounded-full flex-shrink-0"
+                                title="Modified"
+                              />
+                            )}
+                          </div>
+                          <span className="text-xs text-slate-400">
+                            {size.width} × {size.height}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={handleSave}
             disabled={isSaving || !isDirty}
@@ -230,6 +389,22 @@ export function EditorPage() {
         <ElementsPanel />
 
         <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden relative flex flex-col">
+          {/* Device indicator */}
+          {currentDevice && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-full shadow-sm flex items-center gap-2">
+              <DeviceIcon
+                size={currentDevice}
+                className="w-4 h-4 text-slate-600"
+              />
+              <span className="text-xs font-medium text-slate-700">
+                {currentDevice.name}
+              </span>
+              <span className="text-xs text-slate-500">
+                ({currentDevice.width} × {currentDevice.height})
+              </span>
+            </div>
+          )}
+
           <div className="flex-1 flex items-center gap-2 px-8 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide">
             {slides.map((slide, index) => (
               <div
