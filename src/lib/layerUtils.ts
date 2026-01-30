@@ -101,7 +101,7 @@ export function normalizeLayers(layers: LayerConfig[]): LayerConfig[] {
 export function calculateLayerStyle(
   layer: LayerConfig,
   canvas: { width: number; height: number },
-  layoutConfig: LayoutConfig
+  layoutConfig: LayoutConfig,
 ): React.CSSProperties {
   const {
     position = "center",
