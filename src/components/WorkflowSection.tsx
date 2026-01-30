@@ -29,7 +29,13 @@ const steps = [
   },
 ];
 
-const StepCard = ({ step, index }: { step: typeof steps[0]; index: number }) => {
+const StepCard = ({
+  step,
+  index,
+}: {
+  step: (typeof steps)[0];
+  index: number;
+}) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
 
@@ -48,7 +54,8 @@ const StepCard = ({ step, index }: { step: typeof steps[0]; index: number }) => 
           transition={{ delay: index * 0.2 + 0.5, duration: 0.8 }}
           className="absolute top-10 left-[35%] hidden lg:block w-full h-0.5 origin-left"
           style={{
-            background: 'linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.3) 50%, transparent 100%)'
+            background:
+              "linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.3) 50%, transparent 100%)",
           }}
         />
       )}
@@ -82,7 +89,7 @@ const StepCard = ({ step, index }: { step: typeof steps[0]; index: number }) => 
         <h3 className="font-display text-xl font-semibold mt-2 mb-3 text-foreground">
           {step.title}
         </h3>
-        
+
         <p className="text-muted-foreground max-w-xs mx-auto lg:mx-0">
           {step.description}
         </p>
@@ -114,7 +121,8 @@ const WorkflowSection = () => {
             <span className="gradient-text block">Perfect Screenshots</span>
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Creating professional app visuals has never been easier. Follow these simple steps.
+            Creating professional app visuals has never been easier. Follow
+            these simple steps.
           </p>
         </motion.div>
 
