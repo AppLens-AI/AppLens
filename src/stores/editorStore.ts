@@ -5,6 +5,8 @@ import type {
   ImageAsset,
   ExportSize,
   SlideData,
+  DeviceConfig,
+  DeviceConfigMap,
 } from "@/types";
 import { normalizeLayers } from "@/lib/layerUtils";
 
@@ -58,6 +60,15 @@ interface EditorState {
   exportSizes: ExportSize[];
   setExportSizes: (sizes: ExportSize[]) => void;
 
+  // Device preview mode
+  selectedDeviceKey: string | null;
+  setSelectedDeviceKey: (key: string | null) => void;
+  deviceConfigs: DeviceConfigMap;
+  setDeviceConfigs: (configs: DeviceConfigMap) => void;
+  getDeviceSlidesForPreview: () => Slide[];
+  getCurrentDeviceConfig: () => DeviceConfig | null;
+  initializeDeviceConfig: (exportSize: ExportSize, baseSlides: Slide[]) => void;
+
   // History
   history: Slide[][];
   historyIndex: number;
@@ -84,6 +95,7 @@ interface EditorState {
     images: ImageAsset[],
     exportSizes: ExportSize[],
     savedSlides?: SlideData[],
+    savedDeviceConfigs?: DeviceConfigMap,
   ) => void;
 }
 
@@ -94,6 +106,8 @@ const initialState = {
   selectedLayerId: null,
   images: [],
   exportSizes: [],
+  selectedDeviceKey: null,
+  deviceConfigs: {} as DeviceConfigMap,
   history: [],
   historyIndex: -1,
   isDirty: false,
@@ -112,7 +126,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setSlides: (slides) => set({ slides }),
 
   addSlide: () => {
-    const { slides, pushHistory } = get();
+    const { slides, pushHistory, selectedDeviceKey, deviceConfigs } = get();
     pushHistory();
 
     const lastSlide = slides[slides.length - 1];
@@ -130,23 +144,49 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         : [],
     };
 
+    let updatedDeviceConfigs = { ...deviceConfigs };
+    if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey]) {
+      const deviceConfig = updatedDeviceConfigs[selectedDeviceKey];
+      const lastDeviceSlide = deviceConfig.slides[deviceConfig.slides.length - 1];
+      const newDeviceSlide = {
+        id: newSlide.id,
+        canvas: lastDeviceSlide
+          ? { ...lastDeviceSlide.canvas }
+          : { ...newSlide.canvas },
+        layers: lastDeviceSlide
+          ? lastDeviceSlide.layers.map((l) => ({
+              ...l,
+              id: `${l.id}-${Date.now()}`,
+              properties: { ...l.properties },
+            }))
+          : [],
+      };
+      updatedDeviceConfigs[selectedDeviceKey] = {
+        ...deviceConfig,
+        slides: [...deviceConfig.slides, newDeviceSlide],
+        isModified: true,
+      };
+    }
+
     set({
       slides: [...slides, newSlide],
       currentSlideId: newSlide.id,
+      deviceConfigs: updatedDeviceConfigs,
       isDirty: true,
     });
   },
 
   duplicateSlide: (slideId) => {
-    const { slides, pushHistory } = get();
+    const { slides, pushHistory, selectedDeviceKey, deviceConfigs } = get();
     pushHistory();
 
     const slideIndex = slides.findIndex((s) => s.id === slideId);
     if (slideIndex === -1) return;
 
     const slide = slides[slideIndex];
+    const newSlideId = `slide-${Date.now()}`;
     const newSlide: Slide = {
-      id: `slide-${Date.now()}`,
+      id: newSlideId,
       canvas: { ...slide.canvas },
       layers: slide.layers.map((l) => ({
         ...l,
@@ -158,24 +198,61 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const newSlides = [...slides];
     newSlides.splice(slideIndex + 1, 0, newSlide);
 
+    let updatedDeviceConfigs = { ...deviceConfigs };
+    if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey]) {
+      const deviceConfig = updatedDeviceConfigs[selectedDeviceKey];
+      const deviceSlideIndex = deviceConfig.slides.findIndex((s) => s.id === slideId);
+      if (deviceSlideIndex !== -1) {
+        const deviceSlide = deviceConfig.slides[deviceSlideIndex];
+        const newDeviceSlide = {
+          id: newSlideId,
+          canvas: { ...deviceSlide.canvas },
+          layers: deviceSlide.layers.map((l) => ({
+            ...l,
+            id: `${l.id}-${Date.now()}`,
+            properties: { ...l.properties },
+          })),
+        };
+        const newDeviceSlides = [...deviceConfig.slides];
+        newDeviceSlides.splice(deviceSlideIndex + 1, 0, newDeviceSlide);
+        updatedDeviceConfigs[selectedDeviceKey] = {
+          ...deviceConfig,
+          slides: newDeviceSlides,
+          isModified: true,
+        };
+      }
+    }
+
     set({
       slides: newSlides,
       currentSlideId: newSlide.id,
+      deviceConfigs: updatedDeviceConfigs,
       isDirty: true,
     });
   },
 
   deleteSlide: (slideId) => {
-    const { slides, currentSlideId, pushHistory } = get();
-    if (slides.length <= 1) return; // Keep at least one slide
+    const { slides, currentSlideId, pushHistory, selectedDeviceKey, deviceConfigs } = get();
+    if (slides.length <= 1) return; 
 
     pushHistory();
     const newSlides = slides.filter((s) => s.id !== slideId);
+
+    let updatedDeviceConfigs = { ...deviceConfigs };
+    if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey]) {
+      const deviceConfig = updatedDeviceConfigs[selectedDeviceKey];
+      updatedDeviceConfigs[selectedDeviceKey] = {
+        ...deviceConfig,
+        slides: deviceConfig.slides.filter((s) => s.id !== slideId),
+        isModified: true,
+      };
+    }
 
     set({
       slides: newSlides,
       currentSlideId:
         currentSlideId === slideId ? newSlides[0]?.id : currentSlideId,
+      deviceConfigs: updatedDeviceConfigs,
       isDirty: true,
     });
   },
@@ -258,6 +335,136 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setExportSizes: (exportSizes) => set({ exportSizes }),
 
+  setSelectedDeviceKey: (key) => {
+    const { selectedDeviceKey, slides, deviceConfigs } = get();
+    
+    if (key === selectedDeviceKey) return;
+    
+    const cloneSlides = (slidesArr: Slide[]) => 
+      slidesArr.map(slide => ({
+        id: slide.id,
+        canvas: { ...slide.canvas },
+        layers: slide.layers.map(l => ({ 
+          ...l, 
+          properties: { ...l.properties } 
+        })),
+      }));
+    
+    let updatedConfigs = { ...deviceConfigs };
+    if (selectedDeviceKey && updatedConfigs[selectedDeviceKey]) {
+      updatedConfigs[selectedDeviceKey] = {
+        ...updatedConfigs[selectedDeviceKey],
+        slides: cloneSlides(slides),
+        isModified: true,
+      };
+    }
+    
+    if (key && updatedConfigs[key]) {
+      const newSlides = cloneSlides(updatedConfigs[key].slides as Slide[]);
+      set({
+        selectedDeviceKey: key,
+        deviceConfigs: updatedConfigs,
+        slides: newSlides,
+        currentSlideId: newSlides[0]?.id || null,
+        selectedLayerId: null,
+        isDirty: true,
+      });
+    } else {
+      set({ 
+        selectedDeviceKey: key, 
+        deviceConfigs: updatedConfigs,
+        isDirty: true,
+      });
+    }
+  },
+
+  setDeviceConfigs: (deviceConfigs) => set({ deviceConfigs }),
+
+  getDeviceSlidesForPreview: () => {
+    const { selectedDeviceKey, deviceConfigs, slides } = get();
+    if (selectedDeviceKey && deviceConfigs[selectedDeviceKey]) {
+      return deviceConfigs[selectedDeviceKey].slides.map(slide => ({
+        id: slide.id,
+        canvas: { ...slide.canvas },
+        layers: slide.layers.map(l => ({ ...l, properties: { ...l.properties } })),
+      }));
+    }
+    return slides;
+  },
+
+  getCurrentDeviceConfig: () => {
+    const { selectedDeviceKey, deviceConfigs } = get();
+    if (selectedDeviceKey && deviceConfigs[selectedDeviceKey]) {
+      return deviceConfigs[selectedDeviceKey];
+    }
+    return null;
+  },
+
+  initializeDeviceConfig: (exportSize, baseSlides) => {
+    const { deviceConfigs } = get();
+    const key = `${exportSize.name}-${exportSize.width}x${exportSize.height}`;
+    
+    if (!deviceConfigs[key]) {
+      const baseCanvas = baseSlides[0]?.canvas || { width: 1242, height: 2688, backgroundColor: "#D8E5D8" };
+      const scaleX = exportSize.width / baseCanvas.width;
+      const scaleY = exportSize.height / baseCanvas.height;
+      
+      const scaledSlides = baseSlides.map(slide => ({
+        id: slide.id,
+        canvas: {
+          width: exportSize.width,
+          height: exportSize.height,
+          backgroundColor: slide.canvas.backgroundColor,
+        },
+        layers: slide.layers.map(layer => {
+          const props = layer.properties as any;
+          return {
+            ...layer,
+            x: Math.round(layer.x * scaleX),
+            y: Math.round(layer.y * scaleY),
+            width: Math.round(layer.width * scaleX),
+            height: Math.round(layer.height * scaleY),
+            properties: {
+              ...props,
+              fontSize: props.fontSize 
+                ? Math.round(props.fontSize * Math.min(scaleX, scaleY))
+                : props.fontSize,
+              offsetX: props.offsetX
+                ? Math.round(props.offsetX * scaleX)
+                : props.offsetX,
+              offsetY: props.offsetY !== undefined
+                ? Math.round(props.offsetY * scaleY)
+                : props.offsetY,
+              borderRadius: props.borderRadius
+                ? Math.round(props.borderRadius * Math.min(scaleX, scaleY))
+                : props.borderRadius,
+              shadowBlur: props.shadowBlur
+                ? Math.round(props.shadowBlur * Math.min(scaleX, scaleY))
+                : props.shadowBlur,
+              shadowOffsetX: props.shadowOffsetX
+                ? Math.round(props.shadowOffsetX * scaleX)
+                : props.shadowOffsetX,
+              shadowOffsetY: props.shadowOffsetY
+                ? Math.round(props.shadowOffsetY * scaleY)
+                : props.shadowOffsetY,
+            },
+          };
+        }),
+      }));
+
+      set({
+        deviceConfigs: {
+          ...deviceConfigs,
+          [key]: {
+            exportSize,
+            slides: scaledSlides,
+            isModified: false,
+          },
+        },
+      });
+    }
+  },
+
   setDeviceFrame: (frame) => {
     const { deviceFrame } = get();
     set({ deviceFrame: { ...deviceFrame, ...frame }, isDirty: true });
@@ -301,7 +508,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   reset: () => set(initialState),
 
-  initialize: (canvas, layers, images, exportSizes, savedSlides) => {
+  initialize: (canvas, layers, images, exportSizes, savedSlides, savedDeviceConfigs) => {
     let initialSlides: Slide[];
 
     const normalizedLayers = normalizeLayers(layers);
@@ -327,13 +534,92 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
     }
 
+    const initialDeviceConfigs: DeviceConfigMap = savedDeviceConfigs || {};
+    
+    exportSizes.forEach((exportSize) => {
+      const key = `${exportSize.name}-${exportSize.width}x${exportSize.height}`;
+      if (!initialDeviceConfigs[key]) {
+        const baseCanvas = initialSlides[0]?.canvas || { width: 1242, height: 2688, backgroundColor: "#D8E5D8" };
+        const scaleX = exportSize.width / baseCanvas.width;
+        const scaleY = exportSize.height / baseCanvas.height;
+        
+        const scaledSlides = initialSlides.map(slide => ({
+          id: slide.id,
+          canvas: {
+            width: exportSize.width,
+            height: exportSize.height,
+            backgroundColor: slide.canvas.backgroundColor,
+          },
+          layers: slide.layers.map(layer => {
+            const props = layer.properties as any;
+            return {
+              ...layer,
+              x: Math.round(layer.x * scaleX),
+              y: Math.round(layer.y * scaleY),
+              width: Math.round(layer.width * scaleX),
+              height: Math.round(layer.height * scaleY),
+              properties: {
+                ...props,
+                fontSize: props.fontSize 
+                  ? Math.round(props.fontSize * Math.min(scaleX, scaleY))
+                  : props.fontSize,
+                offsetX: props.offsetX
+                  ? Math.round(props.offsetX * scaleX)
+                  : props.offsetX,
+                offsetY: props.offsetY !== undefined
+                  ? Math.round(props.offsetY * scaleY)
+                  : props.offsetY,
+                borderRadius: props.borderRadius
+                  ? Math.round(props.borderRadius * Math.min(scaleX, scaleY))
+                  : props.borderRadius,
+                shadowBlur: props.shadowBlur
+                  ? Math.round(props.shadowBlur * Math.min(scaleX, scaleY))
+                  : props.shadowBlur,
+                shadowOffsetX: props.shadowOffsetX
+                  ? Math.round(props.shadowOffsetX * scaleX)
+                  : props.shadowOffsetX,
+                shadowOffsetY: props.shadowOffsetY
+                  ? Math.round(props.shadowOffsetY * scaleY)
+                  : props.shadowOffsetY,
+              },
+            };
+          }),
+        }));
+
+        initialDeviceConfigs[key] = {
+          exportSize,
+          slides: scaledSlides,
+          isModified: false,
+        };
+      }
+    });
+
+    const iphoneExport = exportSizes.find(s => 
+      s.name.toLowerCase().includes('iphone') || 
+      (s.platform === 'ios' && !s.name.toLowerCase().includes('ipad'))
+    );
+    const defaultExport = iphoneExport || exportSizes[0];
+    const defaultDeviceKey = defaultExport 
+      ? `${defaultExport.name}-${defaultExport.width}x${defaultExport.height}` 
+      : null;
+
+    const activeSlides = defaultDeviceKey && initialDeviceConfigs[defaultDeviceKey]
+      ? initialDeviceConfigs[defaultDeviceKey].slides.map(slide => ({
+          id: slide.id,
+          canvas: { ...slide.canvas },
+          layers: slide.layers.map(l => ({ ...l, properties: { ...l.properties } })),
+        }))
+      : initialSlides;
+
     set({
-      slides: initialSlides,
-      currentSlideId: initialSlides[0]?.id || null,
+      slides: activeSlides,
+      currentSlideId: activeSlides[0]?.id || null,
       selectedLayerId: null,
       images,
       exportSizes,
-      history: [JSON.parse(JSON.stringify(initialSlides))],
+      deviceConfigs: initialDeviceConfigs,
+      selectedDeviceKey: defaultDeviceKey,
+      history: [JSON.parse(JSON.stringify(activeSlides))],
       historyIndex: 0,
       isDirty: false,
     });
