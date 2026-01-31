@@ -34,6 +34,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
