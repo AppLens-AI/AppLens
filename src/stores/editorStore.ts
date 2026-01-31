@@ -147,7 +147,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     let updatedDeviceConfigs = { ...deviceConfigs };
     if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey]) {
       const deviceConfig = updatedDeviceConfigs[selectedDeviceKey];
-      const lastDeviceSlide = deviceConfig.slides[deviceConfig.slides.length - 1];
+      const lastDeviceSlide =
+        deviceConfig.slides[deviceConfig.slides.length - 1];
       const newDeviceSlide = {
         id: newSlide.id,
         canvas: lastDeviceSlide
@@ -201,7 +202,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     let updatedDeviceConfigs = { ...deviceConfigs };
     if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey]) {
       const deviceConfig = updatedDeviceConfigs[selectedDeviceKey];
-      const deviceSlideIndex = deviceConfig.slides.findIndex((s) => s.id === slideId);
+      const deviceSlideIndex = deviceConfig.slides.findIndex(
+        (s) => s.id === slideId,
+      );
       if (deviceSlideIndex !== -1) {
         const deviceSlide = deviceConfig.slides[deviceSlideIndex];
         const newDeviceSlide = {
@@ -232,8 +235,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   deleteSlide: (slideId) => {
-    const { slides, currentSlideId, pushHistory, selectedDeviceKey, deviceConfigs } = get();
-    if (slides.length <= 1) return; 
+    const {
+      slides,
+      currentSlideId,
+      pushHistory,
+      selectedDeviceKey,
+      deviceConfigs,
+    } = get();
+    if (slides.length <= 1) return;
 
     pushHistory();
     const newSlides = slides.filter((s) => s.id !== slideId);
@@ -337,19 +346,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setSelectedDeviceKey: (key) => {
     const { selectedDeviceKey, slides, deviceConfigs } = get();
-    
+
     if (key === selectedDeviceKey) return;
-    
-    const cloneSlides = (slidesArr: Slide[]) => 
-      slidesArr.map(slide => ({
+
+    const cloneSlides = (slidesArr: Slide[]) =>
+      slidesArr.map((slide) => ({
         id: slide.id,
         canvas: { ...slide.canvas },
-        layers: slide.layers.map(l => ({ 
-          ...l, 
-          properties: { ...l.properties } 
+        layers: slide.layers.map((l) => ({
+          ...l,
+          properties: { ...l.properties },
         })),
       }));
-    
+
     let updatedConfigs = { ...deviceConfigs };
     if (selectedDeviceKey && updatedConfigs[selectedDeviceKey]) {
       updatedConfigs[selectedDeviceKey] = {
@@ -358,7 +367,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         isModified: true,
       };
     }
-    
+
     if (key && updatedConfigs[key]) {
       const newSlides = cloneSlides(updatedConfigs[key].slides as Slide[]);
       set({
@@ -370,8 +379,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         isDirty: true,
       });
     } else {
-      set({ 
-        selectedDeviceKey: key, 
+      set({
+        selectedDeviceKey: key,
         deviceConfigs: updatedConfigs,
         isDirty: true,
       });
@@ -383,10 +392,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   getDeviceSlidesForPreview: () => {
     const { selectedDeviceKey, deviceConfigs, slides } = get();
     if (selectedDeviceKey && deviceConfigs[selectedDeviceKey]) {
-      return deviceConfigs[selectedDeviceKey].slides.map(slide => ({
+      return deviceConfigs[selectedDeviceKey].slides.map((slide) => ({
         id: slide.id,
         canvas: { ...slide.canvas },
-        layers: slide.layers.map(l => ({ ...l, properties: { ...l.properties } })),
+        layers: slide.layers.map((l) => ({
+          ...l,
+          properties: { ...l.properties },
+        })),
       }));
     }
     return slides;
@@ -403,20 +415,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   initializeDeviceConfig: (exportSize, baseSlides) => {
     const { deviceConfigs } = get();
     const key = `${exportSize.name}-${exportSize.width}x${exportSize.height}`;
-    
+
     if (!deviceConfigs[key]) {
-      const baseCanvas = baseSlides[0]?.canvas || { width: 1242, height: 2688, backgroundColor: "#D8E5D8" };
+      const baseCanvas = baseSlides[0]?.canvas || {
+        width: 1242,
+        height: 2688,
+        backgroundColor: "#D8E5D8",
+      };
       const scaleX = exportSize.width / baseCanvas.width;
       const scaleY = exportSize.height / baseCanvas.height;
-      
-      const scaledSlides = baseSlides.map(slide => ({
+
+      const scaledSlides = baseSlides.map((slide) => ({
         id: slide.id,
         canvas: {
           width: exportSize.width,
           height: exportSize.height,
           backgroundColor: slide.canvas.backgroundColor,
         },
-        layers: slide.layers.map(layer => {
+        layers: slide.layers.map((layer) => {
           const props = layer.properties as any;
           return {
             ...layer,
@@ -426,15 +442,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             height: Math.round(layer.height * scaleY),
             properties: {
               ...props,
-              fontSize: props.fontSize 
+              fontSize: props.fontSize
                 ? Math.round(props.fontSize * Math.min(scaleX, scaleY))
                 : props.fontSize,
               offsetX: props.offsetX
                 ? Math.round(props.offsetX * scaleX)
                 : props.offsetX,
-              offsetY: props.offsetY !== undefined
-                ? Math.round(props.offsetY * scaleY)
-                : props.offsetY,
+              offsetY:
+                props.offsetY !== undefined
+                  ? Math.round(props.offsetY * scaleY)
+                  : props.offsetY,
               borderRadius: props.borderRadius
                 ? Math.round(props.borderRadius * Math.min(scaleX, scaleY))
                 : props.borderRadius,
@@ -508,7 +525,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   reset: () => set(initialState),
 
-  initialize: (canvas, layers, images, exportSizes, savedSlides, savedDeviceConfigs) => {
+  initialize: (
+    canvas,
+    layers,
+    images,
+    exportSizes,
+    savedSlides,
+    savedDeviceConfigs,
+  ) => {
     let initialSlides: Slide[];
 
     const normalizedLayers = normalizeLayers(layers);
@@ -535,22 +559,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 
     const initialDeviceConfigs: DeviceConfigMap = savedDeviceConfigs || {};
-    
+
     exportSizes.forEach((exportSize) => {
       const key = `${exportSize.name}-${exportSize.width}x${exportSize.height}`;
       if (!initialDeviceConfigs[key]) {
-        const baseCanvas = initialSlides[0]?.canvas || { width: 1242, height: 2688, backgroundColor: "#D8E5D8" };
+        const baseCanvas = initialSlides[0]?.canvas || {
+          width: 1242,
+          height: 2688,
+          backgroundColor: "#D8E5D8",
+        };
         const scaleX = exportSize.width / baseCanvas.width;
         const scaleY = exportSize.height / baseCanvas.height;
-        
-        const scaledSlides = initialSlides.map(slide => ({
+
+        const scaledSlides = initialSlides.map((slide) => ({
           id: slide.id,
           canvas: {
             width: exportSize.width,
             height: exportSize.height,
             backgroundColor: slide.canvas.backgroundColor,
           },
-          layers: slide.layers.map(layer => {
+          layers: slide.layers.map((layer) => {
             const props = layer.properties as any;
             return {
               ...layer,
@@ -560,15 +588,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
               height: Math.round(layer.height * scaleY),
               properties: {
                 ...props,
-                fontSize: props.fontSize 
+                fontSize: props.fontSize
                   ? Math.round(props.fontSize * Math.min(scaleX, scaleY))
                   : props.fontSize,
                 offsetX: props.offsetX
                   ? Math.round(props.offsetX * scaleX)
                   : props.offsetX,
-                offsetY: props.offsetY !== undefined
-                  ? Math.round(props.offsetY * scaleY)
-                  : props.offsetY,
+                offsetY:
+                  props.offsetY !== undefined
+                    ? Math.round(props.offsetY * scaleY)
+                    : props.offsetY,
                 borderRadius: props.borderRadius
                   ? Math.round(props.borderRadius * Math.min(scaleX, scaleY))
                   : props.borderRadius,
@@ -594,22 +623,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
     });
 
-    const iphoneExport = exportSizes.find(s => 
-      s.name.toLowerCase().includes('iphone') || 
-      (s.platform === 'ios' && !s.name.toLowerCase().includes('ipad'))
+    const iphoneExport = exportSizes.find(
+      (s) =>
+        s.name.toLowerCase().includes("iphone") ||
+        (s.platform === "ios" && !s.name.toLowerCase().includes("ipad")),
     );
     const defaultExport = iphoneExport || exportSizes[0];
-    const defaultDeviceKey = defaultExport 
-      ? `${defaultExport.name}-${defaultExport.width}x${defaultExport.height}` 
+    const defaultDeviceKey = defaultExport
+      ? `${defaultExport.name}-${defaultExport.width}x${defaultExport.height}`
       : null;
 
-    const activeSlides = defaultDeviceKey && initialDeviceConfigs[defaultDeviceKey]
-      ? initialDeviceConfigs[defaultDeviceKey].slides.map(slide => ({
-          id: slide.id,
-          canvas: { ...slide.canvas },
-          layers: slide.layers.map(l => ({ ...l, properties: { ...l.properties } })),
-        }))
-      : initialSlides;
+    const activeSlides =
+      defaultDeviceKey && initialDeviceConfigs[defaultDeviceKey]
+        ? initialDeviceConfigs[defaultDeviceKey].slides.map((slide) => ({
+            id: slide.id,
+            canvas: { ...slide.canvas },
+            layers: slide.layers.map((l) => ({
+              ...l,
+              properties: { ...l.properties },
+            })),
+          }))
+        : initialSlides;
 
     set({
       slides: activeSlides,
