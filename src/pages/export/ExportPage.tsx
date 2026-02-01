@@ -276,27 +276,43 @@ export default function ExportPage() {
           );
           const pos = calculateExportPosition(
             layerConfig,
-            slideCanvas,
-            exportSize,
-            props,
-          );
-
-          layer.add(
-            new Konva.Rect({
-              x: pos.x + pos.width / 2,
-              y: pos.y + pos.height / 2,
-              width: pos.width,
-              height: pos.height,
-              fill: props.fill || "transparent",
-              stroke: props.stroke || undefined,
-              strokeWidth: props.stroke ? (props.strokeWidth || 0) * scale : 0,
-              cornerRadius: (props.cornerRadius || 0) * scale,
-              opacity: layerConfig.opacity,
-              rotation: layerConfig.rotation,
-              offsetX: pos.width / 2,
-              offsetY: pos.height / 2,
-            }),
-          );
+             slideCanvas,
+              exportSize,
+               props,
+              );
+          if (props.shapeType === "circle") {
+            layer.add(
+              new Konva.Circle({
+                x: pos.x + pos.width / 2,
+                y: pos.y + pos.height / 2,
+                radius: Math.max(pos.width, pos.height) / 2,
+                fill: props.fill || "transparent",
+                stroke: props.stroke || undefined,
+                strokeWidth: props.stroke ? (props.strokeWidth || 0) * scale : 0,
+                opacity: layerConfig.opacity,
+                rotation: layerConfig.rotation,
+                offsetX: 0,
+                offsetY: 0,
+              })
+            );
+          } else {
+            layer.add(
+              new Konva.Rect({
+                x: pos.x + pos.width / 2,
+                y: pos.y + pos.height / 2,
+                width: pos.width,
+                height: pos.height,
+                fill: props.fill || "transparent",
+                stroke: props.stroke || undefined,
+                strokeWidth: props.stroke ? (props.strokeWidth || 0) * scale : 0,
+                cornerRadius: (props.cornerRadius || 0) * scale,
+                opacity: layerConfig.opacity,
+                rotation: layerConfig.rotation,
+                offsetX: pos.width / 2,
+                offsetY: pos.height / 2,
+              })
+            );
+          }
         }
 
         if (layerConfig.type === "text") {
