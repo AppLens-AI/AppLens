@@ -387,7 +387,6 @@ export function EditorPage() {
         <ElementsPanel />
 
         <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden relative flex flex-col">
-          {/* Device indicator */}
           {currentDevice && (
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-full shadow-sm flex items-center gap-2">
               <DeviceIcon
