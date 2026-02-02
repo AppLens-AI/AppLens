@@ -4,6 +4,7 @@ import type {
   TextProperties,
   ImageProperties,
   ShapeProperties,
+  CanvasConfig,
 } from "@/types";
 import { useEditorStore } from "@/stores/editorStore";
 import { uploadApi } from "@/lib/api";
@@ -16,14 +17,8 @@ import {
 import { ImagePlus, Smartphone, Loader2 } from "lucide-react";
 
 type ResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
-
 type AnchorX = "left" | "center" | "right";
-type Position =
-  | "center"
-  | "top"
-  | "bottom"
-  | "top-overflow"
-  | "bottom-overflow";
+type Position = "center" | "top" | "bottom" | "top-overflow" | "bottom-overflow";
 
 interface InteractionState {
   mode: "move" | "resize";
@@ -42,17 +37,18 @@ interface InteractionState {
 }
 
 export default function TemplateSlide({
-  slide,
+  canvas,
+  layers,
   isActive,
   onClick,
 }: TemplateSlideProps) {
   const {
     selectedLayerId,
     setSelectedLayerId,
-    currentSlideId,
     updateLayer,
     pushHistory,
   } = useEditorStore();
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadingLayerId = useRef<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +58,7 @@ export default function TemplateSlide({
   const getScaleFactor = () => {
     if (!containerRef.current) return 1;
     const renderedWidth = containerRef.current.offsetWidth;
-    return renderedWidth / slide.canvas.width;
+    return renderedWidth / canvas.width;
   };
 
   const getCanvasPoint = (clientX: number, clientY: number) => {
@@ -82,7 +78,7 @@ export default function TemplateSlide({
     anchorX: AnchorX,
     position: Position,
     offsetX = 0,
-    offsetY = 0,
+    offsetY = 0
   ) => {
     const { width, height } = layer;
     let centerX: number;
@@ -92,17 +88,17 @@ export default function TemplateSlide({
         centerX = offsetX + width / 2;
         break;
       case "right":
-        centerX = slide.canvas.width - offsetX - width / 2;
+        centerX = canvas.width - offsetX - width / 2;
         break;
       case "center":
       default:
-        centerX = slide.canvas.width / 2 + offsetX;
+        centerX = canvas.width / 2 + offsetX;
         break;
     }
 
     let centerY: number;
     if (position === "bottom") {
-      centerY = slide.canvas.height - offsetY - height / 2;
+      centerY = canvas.height - offsetY - height / 2;
     } else {
       centerY = offsetY;
     }
@@ -116,7 +112,7 @@ export default function TemplateSlide({
     width: number,
     height: number,
     anchorX: AnchorX,
-    position: Position,
+    position: Position
   ) => {
     let offsetX: number;
     switch (anchorX) {
@@ -124,17 +120,17 @@ export default function TemplateSlide({
         offsetX = centerX - width / 2;
         break;
       case "right":
-        offsetX = slide.canvas.width - centerX - width / 2;
+        offsetX = canvas.width - centerX - width / 2;
         break;
       case "center":
       default:
-        offsetX = centerX - slide.canvas.width / 2;
+        offsetX = centerX - canvas.width / 2;
         break;
     }
 
     const offsetY =
       position === "bottom"
-        ? slide.canvas.height - centerY - height / 2
+        ? canvas.height - centerY - height / 2
         : centerY;
 
     return { offsetX, offsetY };
@@ -143,7 +139,7 @@ export default function TemplateSlide({
   const startMove = (
     e: React.MouseEvent,
     layer: LayerConfig,
-    props: Partial<TextProperties | ImageProperties | ShapeProperties>,
+    props: Partial<TextProperties | ImageProperties | ShapeProperties>
   ) => {
     if (!isActive || layer.locked || e.button !== 0) return;
 
@@ -160,7 +156,7 @@ export default function TemplateSlide({
       anchorX,
       position,
       offsetX,
-      offsetY,
+      offsetY
     );
     const pointer = getCanvasPoint(e.clientX, e.clientY);
 
@@ -186,7 +182,7 @@ export default function TemplateSlide({
     e: React.MouseEvent,
     layer: LayerConfig,
     props: Partial<TextProperties | ImageProperties | ShapeProperties>,
-    handle: ResizeHandle,
+    handle: ResizeHandle
   ) => {
     if (!isActive || layer.locked || e.button !== 0) return;
 
@@ -203,7 +199,7 @@ export default function TemplateSlide({
       anchorX,
       position,
       offsetX,
-      offsetY,
+      offsetY
     );
     const pointer = getCanvasPoint(e.clientX, e.clientY);
 
@@ -228,7 +224,7 @@ export default function TemplateSlide({
 
   const renderResizeHandles = (
     layer: LayerConfig,
-    props: Partial<TextProperties | ImageProperties | ShapeProperties>,
+    props: Partial<TextProperties | ImageProperties | ShapeProperties>
   ) => {
     const handles: Array<{ id: ResizeHandle; style: React.CSSProperties }> = [
       { id: "nw", style: { top: "-6px", left: "-6px", cursor: "nwse-resize" } },
@@ -307,13 +303,10 @@ export default function TemplateSlide({
 
   const handleLayerClick = (e: React.MouseEvent, layerId: string) => {
     e.stopPropagation();
-    if (slide.id !== currentSlideId) {
-      onClick();
-    }
     setSelectedLayerId(layerId);
   };
 
-  const handleSlideClick = () => {
+  const handleCanvasClick = () => {
     onClick();
     setSelectedLayerId(null);
   };
@@ -325,13 +318,11 @@ export default function TemplateSlide({
       const response = await uploadApi.uploadImage(file);
       const imageUrl = response.data.data.url;
 
-      const currentSlide = useEditorStore
-        .getState()
-        .slides.find((s) => s.id === slide.id);
-      const layer = currentSlide?.layers.find((l) => l.id === layerId);
+      const state = useEditorStore.getState();
+      const layer = state.layers.find((l) => l.id === layerId);
 
       if (layer) {
-        updateLayer(slide.id, layerId, {
+        updateLayer(layerId, {
           properties: {
             ...layer.properties,
             src: imageUrl,
@@ -368,8 +359,7 @@ export default function TemplateSlide({
   const renderLayer = (layer: LayerConfig) => {
     if (!layer.visible) return null;
 
-    const isSelected =
-      selectedLayerId === layer.id && slide.id === currentSlideId;
+    const isSelected = selectedLayerId === layer.id && isActive;
 
     const selectionStyle: React.CSSProperties = isSelected
       ? {
@@ -381,9 +371,7 @@ export default function TemplateSlide({
 
     switch (layer.type) {
       case "text": {
-        const props = normalizeLayerProperties<TextProperties>(
-          layer.properties,
-        );
+        const props = normalizeLayerProperties<TextProperties>(layer.properties);
         const scaleFactor = getScaleFactor();
 
         const layoutConfig: LayoutConfig = {
@@ -394,11 +382,7 @@ export default function TemplateSlide({
           offsetY: props.offsetY !== undefined ? props.offsetY : 0,
         };
 
-        const baseStyle = calculateLayerStyle(
-          layer,
-          slide.canvas,
-          layoutConfig,
-        );
+        const baseStyle = calculateLayerStyle(layer, canvas, layoutConfig);
 
         return (
           <div
@@ -432,9 +416,7 @@ export default function TemplateSlide({
 
       case "image":
       case "screenshot": {
-        const props = normalizeLayerProperties<ImageProperties>(
-          layer.properties,
-        );
+        const props = normalizeLayerProperties<ImageProperties>(layer.properties);
         const scaleFactor = getScaleFactor();
         const isLoading = loadingLayers.has(layer.id);
 
@@ -447,11 +429,7 @@ export default function TemplateSlide({
           scale: props.scale || 1,
         };
 
-        const baseStyle = calculateLayerStyle(
-          layer,
-          slide.canvas,
-          layoutConfig,
-        );
+        const baseStyle = calculateLayerStyle(layer, canvas, layoutConfig);
         const borderRadius = (props.borderRadius || 0) * scaleFactor;
         const shadowOffsetX = (props.shadowOffsetX || 0) * scaleFactor;
         const shadowOffsetY = (props.shadowOffsetY || 4) * scaleFactor;
@@ -540,9 +518,7 @@ export default function TemplateSlide({
                     <span className="text-sm text-muted-foreground font-medium">
                       {props.placeholder || "Click to add image"}
                     </span>
-                    {isSelected &&
-                      isActive &&
-                      renderResizeHandles(layer, props)}
+                    {isSelected && isActive && renderResizeHandles(layer, props)}
                   </>
                 )}
               </div>
@@ -552,9 +528,7 @@ export default function TemplateSlide({
       }
 
       case "shape": {
-        const props = normalizeLayerProperties<ShapeProperties>(
-          layer.properties,
-        );
+        const props = normalizeLayerProperties<ShapeProperties>(layer.properties);
         const scaleFactor = getScaleFactor();
 
         const layoutConfig: LayoutConfig = {
@@ -565,11 +539,7 @@ export default function TemplateSlide({
           offsetY: props.offsetY !== undefined ? props.offsetY : 0,
         };
 
-        const baseStyle = calculateLayerStyle(
-          layer,
-          slide.canvas,
-          layoutConfig,
-        );
+        const baseStyle = calculateLayerStyle(layer, canvas, layoutConfig);
         const cornerRadius = (props.cornerRadius || 0) * scaleFactor;
         const strokeWidth = (props.strokeWidth || 0) * scaleFactor;
 
@@ -605,18 +575,17 @@ export default function TemplateSlide({
     }
   };
 
-  const sortedLayers = [...slide.layers].sort((a, b) => a.zIndex - b.zIndex);
-  const backgroundColor = slide.canvas.backgroundColor;
+  const sortedLayers = [...layers].sort((a, b) => a.zIndex - b.zIndex);
+  const backgroundColor = canvas.backgroundColor;
 
   useEffect(() => {
     if (!interaction) return;
 
     const handlePointerMove = (event: MouseEvent) => {
       const state = useEditorStore.getState();
-      const liveSlide = state.slides.find((s) => s.id === slide.id);
-      const layer = liveSlide?.layers.find((l) => l.id === interaction.layerId);
+      const layer = state.layers.find((l) => l.id === interaction.layerId);
 
-      if (!liveSlide || !layer || liveSlide.id !== currentSlideId) return;
+      if (!layer) return;
 
       const props = normalizeLayerProperties(layer.properties);
       const pointer = getCanvasPoint(event.clientX, event.clientY);
@@ -632,11 +601,10 @@ export default function TemplateSlide({
           layer.width,
           layer.height,
           interaction.anchorX,
-          interaction.position,
+          interaction.position
         );
 
         updateLayer(
-          slide.id,
           interaction.layerId,
           {
             properties: {
@@ -645,7 +613,7 @@ export default function TemplateSlide({
               offsetY: Math.round(offsetY * 100) / 100,
             },
           },
-          { pushToHistory: false },
+          { pushToHistory: false }
         );
         return;
       }
@@ -685,11 +653,10 @@ export default function TemplateSlide({
           newWidth,
           newHeight,
           interaction.anchorX,
-          interaction.position,
+          interaction.position
         );
 
         updateLayer(
-          slide.id,
           interaction.layerId,
           {
             width: Math.round(newWidth * 100) / 100,
@@ -700,7 +667,7 @@ export default function TemplateSlide({
               offsetY: Math.round(offsetY * 100) / 100,
             },
           },
-          { pushToHistory: false },
+          { pushToHistory: false }
         );
       }
     };
@@ -714,22 +681,16 @@ export default function TemplateSlide({
       window.removeEventListener("mousemove", handlePointerMove);
       window.removeEventListener("mouseup", handlePointerUp);
     };
-  }, [interaction, currentSlideId, updateLayer]);
-
-  useEffect(() => {
-    if (containerRef.current) {
-      setLoadingLayers(new Set(loadingLayers));
-    }
-  }, [containerRef.current]);
+  }, [interaction, updateLayer, canvas]);
 
   return (
     <div
       ref={containerRef}
       className="relative h-full flex-shrink-0 group"
-      style={{ aspectRatio: `${slide.canvas.width}/${slide.canvas.height}` }}
+      style={{ aspectRatio: `${canvas.width}/${canvas.height}` }}
     >
       <div
-        onClick={handleSlideClick}
+        onClick={handleCanvasClick}
         className={`
           relative w-full h-full rounded-2xl overflow-hidden cursor-pointer
           transition-all duration-200
