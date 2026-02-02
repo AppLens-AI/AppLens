@@ -87,8 +87,8 @@ const colorVariants: Record<
 
 export default function ElementsPanel() {
   const {
-    slides,
-    currentSlideId,
+    canvas,
+    layers,
     selectedLayerId,
     setSelectedLayerId,
     updateLayer,
@@ -100,34 +100,23 @@ export default function ElementsPanel() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hoveredLayer, setHoveredLayer] = useState<string | null>(null);
 
-  const currentSlide = slides.find((s) => s.id === currentSlideId);
-  const layers = currentSlide?.layers || [];
   const sortedLayers = [...layers].sort((a, b) => b.zIndex - a.zIndex);
 
   const handleLayerUpdate = (
     layerId: string,
     updates: Record<string, unknown>,
   ) => {
-    if (currentSlideId) {
-      updateLayer(currentSlideId, layerId, updates);
-    }
+    updateLayer(layerId, updates);
   };
 
   const handleDeleteLayer = (layerId: string) => {
-    if (currentSlideId) {
-      deleteLayer(currentSlideId, layerId);
-    }
+    deleteLayer(layerId);
   };
 
   const handleAddElement = (elementType: string) => {
-    if (!currentSlideId) return;
-
-    const currentSlide = slides.find((s) => s.id === currentSlideId);
-    if (!currentSlide) return;
-
     const maxZIndex =
-      currentSlide.layers.length > 0
-        ? Math.max(...currentSlide.layers.map((l) => l.zIndex))
+      layers.length > 0
+        ? Math.max(...layers.map((l) => l.zIndex))
         : 0;
 
     const newLayerId = `layer-${Date.now()}`;
@@ -139,8 +128,8 @@ export default function ElementsPanel() {
           id: newLayerId,
           type: "text",
           name: "Text",
-          x: currentSlide.canvas.width / 2,
-          y: currentSlide.canvas.height / 2,
+          x: canvas.width / 2,
+          y: canvas.height / 2,
           width: 400,
           height: 60,
           rotation: 0,
@@ -160,7 +149,7 @@ export default function ElementsPanel() {
             anchorX: "center",
             anchorY: "center",
             offsetX: 0,
-            offsetY: currentSlide.canvas.height / 2,
+            offsetY: canvas.height / 2,
           },
         };
         break;
@@ -170,8 +159,8 @@ export default function ElementsPanel() {
           id: newLayerId,
           type: "image",
           name: "Image",
-          x: currentSlide.canvas.width / 2,
-          y: currentSlide.canvas.height / 2,
+          x: canvas.width / 2,
+          y: canvas.height / 2,
           width: 300,
           height: 300,
           rotation: 0,
@@ -192,7 +181,7 @@ export default function ElementsPanel() {
             anchorX: "center",
             anchorY: "center",
             offsetX: 0,
-            offsetY: currentSlide.canvas.height / 2,
+            offsetY: canvas.height / 2,
             scale: 1,
           },
         };
@@ -203,8 +192,8 @@ export default function ElementsPanel() {
           id: newLayerId,
           type: "screenshot",
           name: "Screenshot",
-          x: currentSlide.canvas.width / 2,
-          y: currentSlide.canvas.height / 2,
+          x: canvas.width / 2,
+          y: canvas.height / 2,
           width: 300,
           height: 600,
           rotation: 0,
@@ -225,7 +214,7 @@ export default function ElementsPanel() {
             anchorX: "center",
             anchorY: "center",
             offsetX: 0,
-            offsetY: currentSlide.canvas.height / 2,
+            offsetY: canvas.height / 2,
             scale: 1,
           },
         };
@@ -236,8 +225,8 @@ export default function ElementsPanel() {
           id: newLayerId,
           type: "shape",
           name: "Shape",
-          x: currentSlide.canvas.width / 2,
-          y: currentSlide.canvas.height / 2,
+          x: canvas.width / 2,
+          y: canvas.height / 2,
           width: 200,
           height: 200,
           rotation: 0,
@@ -255,7 +244,7 @@ export default function ElementsPanel() {
             anchorX: "center",
             anchorY: "center",
             offsetX: 0,
-            offsetY: currentSlide.canvas.height / 2,
+            offsetY: canvas.height / 2,
           },
         };
         break;
@@ -264,7 +253,7 @@ export default function ElementsPanel() {
         return;
     }
 
-    addLayer(currentSlideId, newLayer);
+    addLayer(newLayer);
     setIsModalOpen(false);
   };
 
