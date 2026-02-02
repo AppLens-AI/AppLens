@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { projectsApi } from "@/lib/api";
 import { useEditorStore } from "@/stores/editorStore";
-import type { Project, ExportSize } from "@/types";
+import { normalizeLayers } from "@/lib/layerUtils";
+import type { Project, ExportSize, DeviceConfigMap, SlideData } from "@/types";
 import TemplateSlide from "@/components/editor/TemplateSlide";
 import ConfigPanel from "@/components/editor/ConfigPanel";
 import ElementsPanel from "@/components/editor/ElementsPanel";
@@ -12,13 +13,13 @@ import {
   Download,
   ArrowLeft,
   RotateCcw,
-  Copy,
-  Trash2,
-  Plus,
   Smartphone,
   Tablet,
   ChevronDown,
   Check,
+  Plus,
+  Copy,
+  Trash2,
 } from "lucide-react";
 
 const getDeviceKey = (size: ExportSize) =>
@@ -39,9 +40,10 @@ const DeviceIcon = ({
   size,
   className = "w-4 h-4",
 }: {
-  size: ExportSize;
+  size: ExportSize | null;
   className?: string;
 }) => {
+  if (!size) return <Smartphone className={className} />;
   return isTabletDevice(size) ? (
     <Tablet className={className} />
   ) : (
@@ -55,28 +57,36 @@ export function EditorPage() {
   const deviceDropdownRef = useRef<HTMLDivElement>(null);
 
   const {
-    slides,
-    currentSlideId,
-    setCurrentSlideId,
+    canvas,
+    layers,
     setSelectedLayerId,
     undo,
     historyIndex,
     isDirty,
     setIsDirty,
     initialize,
-    duplicateSlide,
-    deleteSlide,
-    addSlide,
     exportSizes,
     selectedDeviceKey,
     setSelectedDeviceKey,
     deviceConfigs,
+    saveCurrentSlideState,
+    currentSlideId,
+    setCurrentSlideId,
+    getCurrentDeviceSlides,
+    addSlide,
+    duplicateSlide,
+    deleteSlide,
   } = useEditorStore();
 
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeviceDropdownOpen, setIsDeviceDropdownOpen] = useState(false);
+
+  const slides = useMemo(
+    () => getCurrentDeviceSlides(),
+    [getCurrentDeviceSlides, deviceConfigs, selectedDeviceKey],
+  );
 
   const currentDevice = useMemo(() => {
     if (!selectedDeviceKey) return null;
@@ -98,17 +108,53 @@ export function EditorPage() {
         const exports = data.projectConfig.exports?.length
           ? data.projectConfig.exports
           : data.template?.jsonConfig.exports || [];
-        const projectSlides = data.projectConfig.slides?.length
-          ? data.projectConfig.slides
-          : data.template?.jsonConfig.slides || [];
+
+        let normalizedDeviceConfigs: DeviceConfigMap | undefined = undefined;
+        const sourceDeviceConfigs =
+          data.projectConfig.deviceConfigs ||
+          data.template?.jsonConfig.deviceConfigs;
+
+        if (sourceDeviceConfigs) {
+          normalizedDeviceConfigs = {};
+          for (const [key, config] of Object.entries(sourceDeviceConfigs)) {
+            if (config.slides && config.slides.length > 0) {
+              normalizedDeviceConfigs[key] = {
+                exportSize: config.exportSize,
+                slides: config.slides.map((slide: SlideData) => ({
+                  id: slide.id,
+                  canvas: { ...slide.canvas },
+                  layers: normalizeLayers(slide.layers),
+                })),
+                isModified: config.isModified,
+              };
+            } else {
+              const oldCanvas = (config as any).canvas || {
+                width: config.exportSize.width,
+                height: config.exportSize.height,
+                backgroundColor: "#FFFFFF",
+              };
+              const oldLayers = (config as any).layers || [];
+              normalizedDeviceConfigs[key] = {
+                exportSize: config.exportSize,
+                slides: [
+                  {
+                    id: `slide-${key.replace(/[^a-z0-9]/gi, "-")}-0`,
+                    canvas: { ...oldCanvas },
+                    layers: normalizeLayers(oldLayers),
+                  },
+                ],
+                isModified: config.isModified,
+              };
+            }
+          }
+        }
 
         initialize(
           data.projectConfig.canvas,
-          data.projectConfig.layers,
+          normalizeLayers(data.projectConfig.layers),
           data.projectConfig.images || [],
           exports,
-          projectSlides,
-          data.projectConfig.deviceConfigs,
+          normalizedDeviceConfigs,
         );
       } catch (error) {
         console.error("Failed to fetch project:", error);
@@ -144,9 +190,6 @@ export function EditorPage() {
       } else if (isMod && e.key === "s") {
         e.preventDefault();
         handleSave();
-      } else if (isMod && e.key === "d") {
-        e.preventDefault();
-        if (currentSlideId) duplicateSlide(currentSlideId);
       } else if (e.key === "Escape") {
         setSelectedLayerId(null);
         setIsDeviceDropdownOpen(false);
@@ -155,26 +198,28 @@ export function EditorPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, currentSlideId, duplicateSlide, setSelectedLayerId]);
+  }, [undo, setSelectedLayerId]);
 
   const handleSave = useCallback(async () => {
     if (!project || isSaving) return;
 
     setIsSaving(true);
     try {
+      saveCurrentSlideState();
+
       const state = useEditorStore.getState();
       const {
-        slides: currentSlides,
+        canvas: currentCanvas,
+        layers: currentLayers,
         images,
         deviceConfigs: configs,
-        selectedDeviceKey: deviceKey,
       } = state;
 
-      const updatedDeviceConfigs = { ...configs };
-      if (deviceKey && updatedDeviceConfigs[deviceKey]) {
-        updatedDeviceConfigs[deviceKey] = {
-          ...updatedDeviceConfigs[deviceKey],
-          slides: currentSlides.map((slide) => ({
+      const updatedDeviceConfigs: DeviceConfigMap = {};
+      for (const [key, config] of Object.entries(configs)) {
+        updatedDeviceConfigs[key] = {
+          exportSize: { ...config.exportSize },
+          slides: config.slides.map((slide) => ({
             id: slide.id,
             canvas: { ...slide.canvas },
             layers: slide.layers.map((l) => ({
@@ -182,26 +227,26 @@ export function EditorPage() {
               properties: { ...l.properties },
             })),
           })),
-          isModified: true,
+          isModified: config.isModified,
         };
       }
 
-      const slidesData = currentSlides.map((slide) => ({
-        id: slide.id,
-        canvas: slide.canvas,
-        layers: slide.layers,
-      }));
+      const iphoneKey = Object.keys(updatedDeviceConfigs).find(
+        (k) =>
+          k.toLowerCase().includes("iphone") ||
+          (k.toLowerCase().includes("ios") &&
+            !k.toLowerCase().includes("ipad")),
+      );
+      const baseConfig =
+        iphoneKey && updatedDeviceConfigs[iphoneKey].slides[0]
+          ? updatedDeviceConfigs[iphoneKey].slides[0]
+          : { canvas: currentCanvas, layers: currentLayers };
 
       await projectsApi.update(project.id, {
         projectConfig: {
-          canvas: currentSlides[0]?.canvas || {
-            width: 1242,
-            height: 2688,
-            backgroundColor: "#D8E5D8",
-          },
-          layers: currentSlides[0]?.layers || [],
+          canvas: baseConfig.canvas,
+          layers: baseConfig.layers,
           images,
-          slides: slidesData,
           deviceConfigs: updatedDeviceConfigs,
         },
       });
@@ -211,7 +256,7 @@ export function EditorPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [project, isSaving, setIsDirty]);
+  }, [project, isSaving, setIsDirty, saveCurrentSlideState]);
 
   const handleDeviceSelect = useCallback(
     (deviceKey: string) => {
@@ -270,23 +315,6 @@ export function EditorPage() {
           >
             <RotateCcw className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => currentSlideId && duplicateSlide(currentSlideId)}
-            className="p-2 rounded text-text-secondary hover:bg-background transition-colors"
-            title="Duplicate (⌘D)"
-          >
-            <Copy className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() =>
-              currentSlideId && slides.length > 1 && deleteSlide(currentSlideId)
-            }
-            disabled={slides.length <= 1}
-            className="p-2 rounded text-red-400 hover:bg-red-500/10 disabled:opacity-30 transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
         </div>
 
         <div className="flex items-center gap-3">
@@ -300,7 +328,9 @@ export function EditorPage() {
                 {currentDevice?.name || "Select Device"}
               </span>
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${isDeviceDropdownOpen ? "rotate-180" : ""}`}
+                className={`w-4 h-4 transition-transform ${
+                  isDeviceDropdownOpen ? "rotate-180" : ""
+                }`}
               />
             </button>
 
@@ -308,7 +338,7 @@ export function EditorPage() {
               <div className="absolute top-full right-0 mt-2 w-64 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-50 overflow-hidden">
                 <div className="p-2 border-b border-slate-600">
                   <p className="text-xs font-medium text-slate-400 px-2 py-1">
-                    Preview Device
+                    Edit Device
                   </p>
                 </div>
                 <div className="max-h-[300px] overflow-y-auto p-2">
@@ -329,7 +359,9 @@ export function EditorPage() {
                         }`}
                       >
                         <div
-                          className={`p-1.5 rounded-lg ${isSelected ? "bg-emerald-500/20" : "bg-slate-700"}`}
+                          className={`p-1.5 rounded-lg ${
+                            isSelected ? "bg-emerald-500/20" : "bg-slate-700"
+                          }`}
                         >
                           <DeviceIcon size={size} className="w-4 h-4" />
                         </div>
@@ -387,38 +419,70 @@ export function EditorPage() {
         <ElementsPanel />
 
         <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden relative flex flex-col">
-          <div className="flex-1 flex items-center gap-2 px-8 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-hide">
-            {slides.map((slide, index) => (
-              <div
-                key={slide.id}
-                className="snap-center flex-shrink-0 h-[calc(100%-30px)]"
-                style={{ minWidth: "fit-content" }}
-              >
-                <TemplateSlide
-                  slide={slide}
-                  isActive={slide.id === currentSlideId}
-                  index={index}
+          <div className="flex-1 overflow-x-auto overflow-y-hidden">
+            <div className="h-full flex items-center gap-3 px-8 py-3 min-w-max">
+              {slides.map((slide, index) => (
+                <div
+                  key={slide.id}
+                  className={`relative flex-shrink-0 h-full transition-all ${
+                    currentSlideId === slide.id &&
+                    "ring-2 ring-emerald-500 ring-offset-4 ring-offset-slate-200 rounded-lg"
+                  }`}
                   onClick={() => setCurrentSlideId(slide.id)}
-                />
-              </div>
-            ))}
+                >
+                  <TemplateSlide
+                    canvas={currentSlideId === slide.id ? canvas : slide.canvas}
+                    layers={currentSlideId === slide.id ? layers : slide.layers}
+                    isActive={currentSlideId === slide.id}
+                    onClick={() => {
+                      setCurrentSlideId(slide.id);
+                      setSelectedLayerId(null);
+                    }}
+                  />
 
-            <div className="snap-center flex-shrink-0 h-[calc(100%-30px)] flex items-center">
-              <button
-                onClick={addSlide}
-                className="h-full aspect-[9/19.5] rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-500/5 transition-all flex flex-col items-center justify-center gap-2 group"
-              >
-                <div className="p-3 bg-slate-100 group-hover:bg-emerald-500/10 rounded-full transition-colors">
-                  <Plus className="w-6 h-6 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                  {currentSlideId !== slide.id && (
+                    <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-all rounded-lg flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          duplicateSlide(slide.id);
+                        }}
+                        className="p-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white shadow-lg"
+                        title="Duplicate"
+                      >
+                        <Copy className="w-5 h-5" />
+                      </button>
+                      {slides.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSlide(slide.id);
+                          }}
+                          className="p-3 bg-red-500 hover:bg-red-600 rounded-xl text-white shadow-lg"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <span className="text-xs font-medium text-slate-400 group-hover:text-emerald-500 transition-colors">
+              ))}
+
+              <div
+                onClick={addSlide}
+                className="flex-shrink-0 h-[calc(100%-10px)] aspect-[9/19.5] rounded-xl border-4 border-dashed border-slate-400 hover:border-emerald-500 bg-white/50 hover:bg-emerald-50 transition-all cursor-pointer flex flex-col items-center justify-center gap-4"
+              >
+                <div className="w-16 h-16 rounded-full bg-slate-200 hover:bg-emerald-100 flex items-center justify-center transition-colors">
+                  <Plus className="w-8 h-8 text-slate-500" />
+                </div>
+                <span className="text-sm font-semibold text-slate-500">
                   Add Slide
                 </span>
-              </button>
+              </div>
             </div>
           </div>
         </div>
-
         <ConfigPanel />
       </div>
     </div>
