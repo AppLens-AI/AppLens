@@ -4,52 +4,35 @@ import type {
   CanvasConfig,
   ImageAsset,
   ExportSize,
-  SlideData,
   DeviceConfig,
   DeviceConfigMap,
+  SlideData,
 } from "@/types";
 import { normalizeLayers } from "@/lib/layerUtils";
-
-export interface Slide {
-  id: string;
-  canvas: CanvasConfig;
-  layers: LayerConfig[];
-}
 
 interface EditorState {
   // Project info
   projectName: string;
   setProjectName: (name: string) => void;
 
-  // Slides (multiple template images)
-  slides: Slide[];
-  setSlides: (slides: Slide[]) => void;
-  addSlide: () => void;
-  duplicateSlide: (slideId: string) => void;
-  deleteSlide: (slideId: string) => void;
+  // Current slide's canvas and layers (derived from device + slide)
+  canvas: CanvasConfig;
+  layers: LayerConfig[];
+  setCanvas: (canvas: CanvasConfig) => void;
+  setLayers: (layers: LayerConfig[]) => void;
 
-  // Current slide
-  currentSlideId: string | null;
-  setCurrentSlideId: (id: string | null) => void;
-
-  // Get current slide
-  getCurrentSlide: () => Slide | undefined;
-
-  // Layers in current slide
+  // Layer operations
   updateLayer: (
-    slideId: string,
     layerId: string,
     updates: Partial<LayerConfig>,
-    options?: { pushToHistory?: boolean },
+    options?: { pushToHistory?: boolean }
   ) => void;
-  deleteLayer: (slideId: string, layerId: string) => void;
-  addLayer: (slideId: string, layer: LayerConfig) => void;
+  deleteLayer: (layerId: string) => void;
+  addLayer: (layer: LayerConfig) => void;
 
   // Selection
   selectedLayerId: string | null;
   setSelectedLayerId: (id: string | null) => void;
-
-  // Get selected layer
   getSelectedLayer: () => LayerConfig | undefined;
 
   // Images
@@ -60,17 +43,25 @@ interface EditorState {
   exportSizes: ExportSize[];
   setExportSizes: (sizes: ExportSize[]) => void;
 
-  // Device preview mode
+  // Device management
   selectedDeviceKey: string | null;
   setSelectedDeviceKey: (key: string | null) => void;
   deviceConfigs: DeviceConfigMap;
   setDeviceConfigs: (configs: DeviceConfigMap) => void;
-  getDeviceSlidesForPreview: () => Slide[];
   getCurrentDeviceConfig: () => DeviceConfig | null;
-  initializeDeviceConfig: (exportSize: ExportSize, baseSlides: Slide[]) => void;
+  saveCurrentSlideState: () => void;
+
+  // Slide management (per device)
+  currentSlideId: string | null;
+  setCurrentSlideId: (slideId: string | null) => void;
+  getCurrentSlideIndex: () => number;
+  getCurrentDeviceSlides: () => SlideData[];
+  addSlide: () => void;
+  duplicateSlide: (slideId: string) => void;
+  deleteSlide: (slideId: string) => void;
 
   // History
-  history: Slide[][];
+  history: { canvas: CanvasConfig; layers: LayerConfig[] }[];
   historyIndex: number;
   pushHistory: () => void;
   undo: () => void;
@@ -94,21 +85,27 @@ interface EditorState {
     layers: LayerConfig[],
     images: ImageAsset[],
     exportSizes: ExportSize[],
-    savedSlides?: SlideData[],
-    savedDeviceConfigs?: DeviceConfigMap,
+    savedDeviceConfigs?: DeviceConfigMap
   ) => void;
 }
 
+const DEFAULT_CANVAS: CanvasConfig = {
+  width: 1242,
+  height: 2688,
+  backgroundColor: "#D8E5D8",
+};
+
 const initialState = {
   projectName: "",
-  slides: [],
-  currentSlideId: null,
+  canvas: { ...DEFAULT_CANVAS },
+  layers: [] as LayerConfig[],
   selectedLayerId: null,
-  images: [],
-  exportSizes: [],
+  images: [] as ImageAsset[],
+  exportSizes: [] as ExportSize[],
   selectedDeviceKey: null,
   deviceConfigs: {} as DeviceConfigMap,
-  history: [],
+  currentSlideId: null,
+  history: [] as { canvas: CanvasConfig; layers: LayerConfig[] }[],
   historyIndex: -1,
   isDirty: false,
   deviceFrame: {
@@ -118,213 +115,145 @@ const initialState = {
   },
 };
 
+// Helper to deep clone layers
+const cloneLayers = (layers: LayerConfig[]): LayerConfig[] =>
+  layers.map((l) => ({
+    ...l,
+    properties: { ...l.properties },
+  }));
+
+// Helper to deep clone slide
+const cloneSlide = (slide: SlideData): SlideData => ({
+  id: slide.id,
+  canvas: { ...slide.canvas },
+  layers: cloneLayers(slide.layers),
+});
+
+// Generate unique slide ID
+const generateSlideId = (deviceKey: string, index: number): string => {
+  const sanitizedKey = deviceKey.replace(/[^a-z0-9]/gi, "-");
+  return `slide-${sanitizedKey}-${Date.now()}-${index}`;
+};
+
 export const useEditorStore = create<EditorState>((set, get) => ({
   ...initialState,
 
   setProjectName: (projectName) => set({ projectName }),
 
-  setSlides: (slides) => set({ slides }),
+  setCanvas: (canvas) => set({ canvas, isDirty: true }),
 
-  addSlide: () => {
-    const { slides, pushHistory, selectedDeviceKey, deviceConfigs } = get();
-    pushHistory();
+  setLayers: (layers) => {
+    const { selectedDeviceKey, deviceConfigs, currentSlideId, canvas } = get();
 
-    const lastSlide = slides[slides.length - 1];
-    const newSlide: Slide = {
-      id: `slide-${Date.now()}`,
-      canvas: lastSlide
-        ? { ...lastSlide.canvas }
-        : { width: 1242, height: 2688, backgroundColor: "#D8E5D8" },
-      layers: lastSlide
-        ? lastSlide.layers.map((l) => ({
-            ...l,
-            id: `${l.id}-${Date.now()}`,
-            properties: { ...l.properties },
-          }))
-        : [],
-    };
-
+    // Update current slide in device config
     let updatedDeviceConfigs = { ...deviceConfigs };
-    if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey]) {
-      const deviceConfig = updatedDeviceConfigs[selectedDeviceKey];
-      const lastDeviceSlide =
-        deviceConfig.slides[deviceConfig.slides.length - 1];
-      const newDeviceSlide = {
-        id: newSlide.id,
-        canvas: lastDeviceSlide
-          ? { ...lastDeviceSlide.canvas }
-          : { ...newSlide.canvas },
-        layers: lastDeviceSlide
-          ? lastDeviceSlide.layers.map((l) => ({
-              ...l,
-              id: `${l.id}-${Date.now()}`,
-              properties: { ...l.properties },
-            }))
-          : [],
-      };
-      updatedDeviceConfigs[selectedDeviceKey] = {
-        ...deviceConfig,
-        slides: [...deviceConfig.slides, newDeviceSlide],
-        isModified: true,
-      };
-    }
-
-    set({
-      slides: [...slides, newSlide],
-      currentSlideId: newSlide.id,
-      deviceConfigs: updatedDeviceConfigs,
-      isDirty: true,
-    });
-  },
-
-  duplicateSlide: (slideId) => {
-    const { slides, pushHistory, selectedDeviceKey, deviceConfigs } = get();
-    pushHistory();
-
-    const slideIndex = slides.findIndex((s) => s.id === slideId);
-    if (slideIndex === -1) return;
-
-    const slide = slides[slideIndex];
-    const newSlideId = `slide-${Date.now()}`;
-    const newSlide: Slide = {
-      id: newSlideId,
-      canvas: { ...slide.canvas },
-      layers: slide.layers.map((l) => ({
-        ...l,
-        id: `${l.id}-${Date.now()}`,
-        properties: { ...l.properties },
-      })),
-    };
-
-    const newSlides = [...slides];
-    newSlides.splice(slideIndex + 1, 0, newSlide);
-
-    let updatedDeviceConfigs = { ...deviceConfigs };
-    if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey]) {
-      const deviceConfig = updatedDeviceConfigs[selectedDeviceKey];
-      const deviceSlideIndex = deviceConfig.slides.findIndex(
-        (s) => s.id === slideId,
+    if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey] && currentSlideId) {
+      const config = updatedDeviceConfigs[selectedDeviceKey];
+      const updatedSlides = config.slides.map((slide) =>
+        slide.id === currentSlideId
+          ? { ...slide, canvas: { ...canvas }, layers: cloneLayers(layers) }
+          : slide
       );
-      if (deviceSlideIndex !== -1) {
-        const deviceSlide = deviceConfig.slides[deviceSlideIndex];
-        const newDeviceSlide = {
-          id: newSlideId,
-          canvas: { ...deviceSlide.canvas },
-          layers: deviceSlide.layers.map((l) => ({
-            ...l,
-            id: `${l.id}-${Date.now()}`,
-            properties: { ...l.properties },
-          })),
-        };
-        const newDeviceSlides = [...deviceConfig.slides];
-        newDeviceSlides.splice(deviceSlideIndex + 1, 0, newDeviceSlide);
-        updatedDeviceConfigs[selectedDeviceKey] = {
-          ...deviceConfig,
-          slides: newDeviceSlides,
-          isModified: true,
-        };
-      }
-    }
-
-    set({
-      slides: newSlides,
-      currentSlideId: newSlide.id,
-      deviceConfigs: updatedDeviceConfigs,
-      isDirty: true,
-    });
-  },
-
-  deleteSlide: (slideId) => {
-    const {
-      slides,
-      currentSlideId,
-      pushHistory,
-      selectedDeviceKey,
-      deviceConfigs,
-    } = get();
-    if (slides.length <= 1) return;
-
-    pushHistory();
-    const newSlides = slides.filter((s) => s.id !== slideId);
-
-    let updatedDeviceConfigs = { ...deviceConfigs };
-    if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey]) {
-      const deviceConfig = updatedDeviceConfigs[selectedDeviceKey];
       updatedDeviceConfigs[selectedDeviceKey] = {
-        ...deviceConfig,
-        slides: deviceConfig.slides.filter((s) => s.id !== slideId),
+        ...config,
+        slides: updatedSlides,
         isModified: true,
       };
     }
 
-    set({
-      slides: newSlides,
-      currentSlideId:
-        currentSlideId === slideId ? newSlides[0]?.id : currentSlideId,
-      deviceConfigs: updatedDeviceConfigs,
-      isDirty: true,
-    });
+    set({ layers, deviceConfigs: updatedDeviceConfigs, isDirty: true });
   },
 
-  setCurrentSlideId: (currentSlideId) =>
-    set({ currentSlideId, selectedLayerId: null }),
-
-  getCurrentSlide: () => {
-    const { slides, currentSlideId } = get();
-    return slides.find((s) => s.id === currentSlideId);
-  },
-
-  updateLayer: (slideId, layerId, updates, options) => {
-    const { slides, pushHistory } = get();
+  updateLayer: (layerId, updates, options) => {
+    const { layers, pushHistory, selectedDeviceKey, deviceConfigs, currentSlideId, canvas } = get();
     const shouldPushHistory = options?.pushToHistory !== false;
 
     if (shouldPushHistory) {
       pushHistory();
     }
 
+    const updatedLayers = layers.map((layer) =>
+      layer.id === layerId ? { ...layer, ...updates } : layer
+    );
+
+    // Update current slide in device config
+    let updatedDeviceConfigs = { ...deviceConfigs };
+    if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey] && currentSlideId) {
+      const config = updatedDeviceConfigs[selectedDeviceKey];
+      const updatedSlides = config.slides.map((slide) =>
+        slide.id === currentSlideId
+          ? { ...slide, canvas: { ...canvas }, layers: cloneLayers(updatedLayers) }
+          : slide
+      );
+      updatedDeviceConfigs[selectedDeviceKey] = {
+        ...config,
+        slides: updatedSlides,
+        isModified: true,
+      };
+    }
+
     set({
-      slides: slides.map((slide) => {
-        if (slide.id !== slideId) return slide;
-        return {
-          ...slide,
-          layers: slide.layers.map((layer) =>
-            layer.id === layerId ? { ...layer, ...updates } : layer,
-          ),
-        };
-      }),
+      layers: updatedLayers,
+      deviceConfigs: updatedDeviceConfigs,
       isDirty: true,
     });
   },
 
-  deleteLayer: (slideId, layerId) => {
-    const { slides, selectedLayerId, pushHistory } = get();
+  deleteLayer: (layerId) => {
+    const { layers, selectedLayerId, pushHistory, selectedDeviceKey, deviceConfigs, currentSlideId, canvas } = get();
     pushHistory();
 
+    const updatedLayers = layers.filter((layer) => layer.id !== layerId);
+
+    // Update current slide in device config
+    let updatedDeviceConfigs = { ...deviceConfigs };
+    if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey] && currentSlideId) {
+      const config = updatedDeviceConfigs[selectedDeviceKey];
+      const updatedSlides = config.slides.map((slide) =>
+        slide.id === currentSlideId
+          ? { ...slide, canvas: { ...canvas }, layers: cloneLayers(updatedLayers) }
+          : slide
+      );
+      updatedDeviceConfigs[selectedDeviceKey] = {
+        ...config,
+        slides: updatedSlides,
+        isModified: true,
+      };
+    }
+
     set({
-      slides: slides.map((slide) => {
-        if (slide.id !== slideId) return slide;
-        return {
-          ...slide,
-          layers: slide.layers.filter((layer) => layer.id !== layerId),
-        };
-      }),
+      layers: updatedLayers,
+      deviceConfigs: updatedDeviceConfigs,
       selectedLayerId: selectedLayerId === layerId ? null : selectedLayerId,
       isDirty: true,
     });
   },
 
-  addLayer: (slideId, layer) => {
-    const { slides, pushHistory } = get();
+  addLayer: (layer) => {
+    const { layers, pushHistory, selectedDeviceKey, deviceConfigs, currentSlideId, canvas } = get();
     pushHistory();
 
+    const updatedLayers = [...layers, layer];
+
+    // Update current slide in device config
+    let updatedDeviceConfigs = { ...deviceConfigs };
+    if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey] && currentSlideId) {
+      const config = updatedDeviceConfigs[selectedDeviceKey];
+      const updatedSlides = config.slides.map((slide) =>
+        slide.id === currentSlideId
+          ? { ...slide, canvas: { ...canvas }, layers: cloneLayers(updatedLayers) }
+          : slide
+      );
+      updatedDeviceConfigs[selectedDeviceKey] = {
+        ...config,
+        slides: updatedSlides,
+        isModified: true,
+      };
+    }
+
     set({
-      slides: slides.map((slide) => {
-        if (slide.id !== slideId) return slide;
-        return {
-          ...slide,
-          layers: [...slide.layers, layer],
-        };
-      }),
+      layers: updatedLayers,
+      deviceConfigs: updatedDeviceConfigs,
       isDirty: true,
     });
   },
@@ -332,9 +261,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setSelectedLayerId: (id) => set({ selectedLayerId: id }),
 
   getSelectedLayer: () => {
-    const { slides, currentSlideId, selectedLayerId } = get();
-    const currentSlide = slides.find((s) => s.id === currentSlideId);
-    return currentSlide?.layers.find((l) => l.id === selectedLayerId);
+    const { layers, selectedLayerId } = get();
+    return layers.find((l) => l.id === selectedLayerId);
   },
 
   addImage: (image) => {
@@ -344,65 +272,278 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setExportSizes: (exportSizes) => set({ exportSizes }),
 
-  setSelectedDeviceKey: (key) => {
-    const { selectedDeviceKey, slides, deviceConfigs } = get();
+  // Slide management methods
+  getCurrentSlideIndex: () => {
+    const { selectedDeviceKey, deviceConfigs, currentSlideId } = get();
+    if (!selectedDeviceKey || !deviceConfigs[selectedDeviceKey] || !currentSlideId) return 0;
+    const slides = deviceConfigs[selectedDeviceKey].slides;
+    const index = slides.findIndex((s) => s.id === currentSlideId);
+    return index >= 0 ? index : 0;
+  },
 
-    if (key === selectedDeviceKey) return;
+  getCurrentDeviceSlides: () => {
+    const { selectedDeviceKey, deviceConfigs } = get();
+    if (!selectedDeviceKey || !deviceConfigs[selectedDeviceKey]) return [];
+    return deviceConfigs[selectedDeviceKey].slides;
+  },
 
-    const cloneSlides = (slidesArr: Slide[]) =>
-      slidesArr.map((slide) => ({
-        id: slide.id,
-        canvas: { ...slide.canvas },
-        layers: slide.layers.map((l) => ({
-          ...l,
-          properties: { ...l.properties },
-        })),
-      }));
+  setCurrentSlideId: (slideId) => {
+    const { selectedDeviceKey, deviceConfigs, canvas, layers, currentSlideId } = get();
 
+    if (slideId === currentSlideId) return;
+
+    // Save current slide state before switching
     let updatedConfigs = { ...deviceConfigs };
-    if (selectedDeviceKey && updatedConfigs[selectedDeviceKey]) {
+    if (selectedDeviceKey && updatedConfigs[selectedDeviceKey] && currentSlideId) {
+      const config = updatedConfigs[selectedDeviceKey];
+      const updatedSlides = config.slides.map((slide) =>
+        slide.id === currentSlideId
+          ? { ...slide, canvas: { ...canvas }, layers: cloneLayers(layers) }
+          : slide
+      );
       updatedConfigs[selectedDeviceKey] = {
-        ...updatedConfigs[selectedDeviceKey],
-        slides: cloneSlides(slides),
+        ...config,
+        slides: updatedSlides,
         isModified: true,
       };
     }
 
-    if (key && updatedConfigs[key]) {
-      const newSlides = cloneSlides(updatedConfigs[key].slides as Slide[]);
-      set({
-        selectedDeviceKey: key,
-        deviceConfigs: updatedConfigs,
-        slides: newSlides,
-        currentSlideId: newSlides[0]?.id || null,
-        selectedLayerId: null,
-        isDirty: true,
-      });
-    } else {
-      set({
-        selectedDeviceKey: key,
-        deviceConfigs: updatedConfigs,
-        isDirty: true,
-      });
+    // Load new slide state
+    if (slideId && selectedDeviceKey && updatedConfigs[selectedDeviceKey]) {
+      const newSlide = updatedConfigs[selectedDeviceKey].slides.find((s) => s.id === slideId);
+      if (newSlide) {
+        set({
+          currentSlideId: slideId,
+          deviceConfigs: updatedConfigs,
+          canvas: { ...newSlide.canvas },
+          layers: cloneLayers(newSlide.layers),
+          selectedLayerId: null,
+          isDirty: true,
+        });
+        return;
+      }
     }
+
+    set({
+      currentSlideId: slideId,
+      deviceConfigs: updatedConfigs,
+      isDirty: true,
+    });
+  },
+
+  addSlide: () => {
+    const { selectedDeviceKey, deviceConfigs, canvas, layers, currentSlideId, pushHistory } = get();
+    if (!selectedDeviceKey || !deviceConfigs[selectedDeviceKey]) return;
+
+    pushHistory();
+
+    const config = deviceConfigs[selectedDeviceKey];
+    const newSlideId = generateSlideId(selectedDeviceKey, config.slides.length);
+
+    // Create new slide with empty layers but same canvas settings
+    const newSlide: SlideData = {
+      id: newSlideId,
+      canvas: { ...config.exportSize, backgroundColor: canvas.backgroundColor } as CanvasConfig,
+      layers: [],
+    };
+
+    // Save current slide and add new one
+    const updatedSlides = config.slides.map((slide) =>
+      slide.id === currentSlideId
+        ? { ...slide, canvas: { ...canvas }, layers: cloneLayers(layers) }
+        : slide
+    );
+    updatedSlides.push(newSlide);
+
+    const updatedConfigs = {
+      ...deviceConfigs,
+      [selectedDeviceKey]: {
+        ...config,
+        slides: updatedSlides,
+        isModified: true,
+      },
+    };
+
+    // Switch to new slide
+    set({
+      deviceConfigs: updatedConfigs,
+      currentSlideId: newSlideId,
+      canvas: { ...newSlide.canvas },
+      layers: [],
+      selectedLayerId: null,
+      isDirty: true,
+    });
+  },
+
+  duplicateSlide: (slideId) => {
+    const { selectedDeviceKey, deviceConfigs, canvas, layers, currentSlideId, pushHistory } = get();
+    if (!selectedDeviceKey || !deviceConfigs[selectedDeviceKey]) return;
+
+    pushHistory();
+
+    const config = deviceConfigs[selectedDeviceKey];
+    const sourceSlide = config.slides.find((s) => s.id === slideId);
+    if (!sourceSlide) return;
+
+    const newSlideId = generateSlideId(selectedDeviceKey, config.slides.length);
+
+    // Create duplicate with new layer IDs
+    const duplicatedSlide: SlideData = {
+      id: newSlideId,
+      canvas: { ...sourceSlide.canvas },
+      layers: sourceSlide.layers.map((layer) => ({
+        ...layer,
+        id: `${layer.id}-dup-${Date.now()}`,
+        properties: { ...layer.properties },
+      })),
+    };
+
+    // Save current slide and add duplicate
+    const slideIndex = config.slides.findIndex((s) => s.id === slideId);
+    const updatedSlides = config.slides.map((slide) =>
+      slide.id === currentSlideId
+        ? { ...slide, canvas: { ...canvas }, layers: cloneLayers(layers) }
+        : slide
+    );
+    // Insert after the source slide
+    updatedSlides.splice(slideIndex + 1, 0, duplicatedSlide);
+
+    const updatedConfigs = {
+      ...deviceConfigs,
+      [selectedDeviceKey]: {
+        ...config,
+        slides: updatedSlides,
+        isModified: true,
+      },
+    };
+
+    // Switch to duplicated slide
+    set({
+      deviceConfigs: updatedConfigs,
+      currentSlideId: newSlideId,
+      canvas: { ...duplicatedSlide.canvas },
+      layers: cloneLayers(duplicatedSlide.layers),
+      selectedLayerId: null,
+      isDirty: true,
+    });
+  },
+
+  deleteSlide: (slideId) => {
+    const { selectedDeviceKey, deviceConfigs, currentSlideId, pushHistory } = get();
+    if (!selectedDeviceKey || !deviceConfigs[selectedDeviceKey]) return;
+
+    const config = deviceConfigs[selectedDeviceKey];
+    if (config.slides.length <= 1) return; // Don't delete last slide
+
+    pushHistory();
+
+    const slideIndex = config.slides.findIndex((s) => s.id === slideId);
+    const updatedSlides = config.slides.filter((s) => s.id !== slideId);
+
+    const updatedConfigs = {
+      ...deviceConfigs,
+      [selectedDeviceKey]: {
+        ...config,
+        slides: updatedSlides,
+        isModified: true,
+      },
+    };
+
+    // If deleting current slide, switch to adjacent slide
+    let newCurrentSlideId = currentSlideId;
+    let newCanvas = get().canvas;
+    let newLayers = get().layers;
+
+    if (slideId === currentSlideId) {
+      // Select previous slide, or next if first was deleted
+      const newIndex = Math.max(0, slideIndex - 1);
+      const newSlide = updatedSlides[newIndex];
+      newCurrentSlideId = newSlide.id;
+      newCanvas = { ...newSlide.canvas };
+      newLayers = cloneLayers(newSlide.layers);
+    }
+
+    set({
+      deviceConfigs: updatedConfigs,
+      currentSlideId: newCurrentSlideId,
+      canvas: newCanvas,
+      layers: newLayers,
+      selectedLayerId: null,
+      isDirty: true,
+    });
+  },
+
+  saveCurrentSlideState: () => {
+    const { selectedDeviceKey, deviceConfigs, canvas, layers, currentSlideId } = get();
+    if (!selectedDeviceKey || !deviceConfigs[selectedDeviceKey] || !currentSlideId) return;
+
+    const config = deviceConfigs[selectedDeviceKey];
+    const updatedSlides = config.slides.map((slide) =>
+      slide.id === currentSlideId
+        ? { ...slide, canvas: { ...canvas }, layers: cloneLayers(layers) }
+        : slide
+    );
+
+    const updatedDeviceConfigs = {
+      ...deviceConfigs,
+      [selectedDeviceKey]: {
+        ...config,
+        slides: updatedSlides,
+        isModified: true,
+      },
+    };
+
+    set({ deviceConfigs: updatedDeviceConfigs });
+  },
+
+  setSelectedDeviceKey: (key) => {
+    const { selectedDeviceKey, canvas, layers, deviceConfigs, currentSlideId } = get();
+
+    if (key === selectedDeviceKey) return;
+
+    // Save current slide to current device config before switching
+    let updatedConfigs = { ...deviceConfigs };
+    if (selectedDeviceKey && updatedConfigs[selectedDeviceKey] && currentSlideId) {
+      const config = updatedConfigs[selectedDeviceKey];
+      const updatedSlides = config.slides.map((slide) =>
+        slide.id === currentSlideId
+          ? { ...slide, canvas: { ...canvas }, layers: cloneLayers(layers) }
+          : slide
+      );
+      updatedConfigs[selectedDeviceKey] = {
+        ...config,
+        slides: updatedSlides,
+        isModified: true,
+      };
+    }
+
+    // Load the new device's first slide
+    if (key && updatedConfigs[key]) {
+      const newConfig = updatedConfigs[key];
+      const firstSlide = newConfig.slides[0];
+      if (firstSlide) {
+        set({
+          selectedDeviceKey: key,
+          deviceConfigs: updatedConfigs,
+          currentSlideId: firstSlide.id,
+          canvas: { ...firstSlide.canvas },
+          layers: cloneLayers(firstSlide.layers),
+          selectedLayerId: null,
+          isDirty: true,
+        });
+        return;
+      }
+    }
+
+    set({
+      selectedDeviceKey: key,
+      deviceConfigs: updatedConfigs,
+      currentSlideId: null,
+      isDirty: true,
+    });
   },
 
   setDeviceConfigs: (deviceConfigs) => set({ deviceConfigs }),
-
-  getDeviceSlidesForPreview: () => {
-    const { selectedDeviceKey, deviceConfigs, slides } = get();
-    if (selectedDeviceKey && deviceConfigs[selectedDeviceKey]) {
-      return deviceConfigs[selectedDeviceKey].slides.map((slide) => ({
-        id: slide.id,
-        canvas: { ...slide.canvas },
-        layers: slide.layers.map((l) => ({
-          ...l,
-          properties: { ...l.properties },
-        })),
-      }));
-    }
-    return slides;
-  },
 
   getCurrentDeviceConfig: () => {
     const { selectedDeviceKey, deviceConfigs } = get();
@@ -412,27 +553,157 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     return null;
   },
 
-  initializeDeviceConfig: (exportSize, baseSlides) => {
-    const { deviceConfigs } = get();
-    const key = `${exportSize.name}-${exportSize.width}x${exportSize.height}`;
+  setDeviceFrame: (frame) => {
+    const { deviceFrame } = get();
+    set({ deviceFrame: { ...deviceFrame, ...frame }, isDirty: true });
+  },
 
-    if (!deviceConfigs[key]) {
-      const baseCanvas = baseSlides[0]?.canvas || {
-        width: 1242,
-        height: 2688,
-        backgroundColor: "#D8E5D8",
-      };
-      const scaleX = exportSize.width / baseCanvas.width;
-      const scaleY = exportSize.height / baseCanvas.height;
+  pushHistory: () => {
+    const { canvas, layers, history, historyIndex } = get();
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push({
+      canvas: { ...canvas },
+      layers: cloneLayers(layers),
+    });
+    set({
+      history: newHistory.slice(-50),
+      historyIndex: newHistory.length - 1,
+    });
+  },
 
-      const scaledSlides = baseSlides.map((slide) => ({
-        id: slide.id,
-        canvas: {
-          width: exportSize.width,
-          height: exportSize.height,
-          backgroundColor: slide.canvas.backgroundColor,
-        },
-        layers: slide.layers.map((layer) => {
+  undo: () => {
+    const { history, historyIndex, selectedDeviceKey, deviceConfigs, currentSlideId } = get();
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      const state = history[newIndex];
+
+      // Update current slide in device config
+      let updatedDeviceConfigs = { ...deviceConfigs };
+      if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey] && currentSlideId) {
+        const config = updatedDeviceConfigs[selectedDeviceKey];
+        const updatedSlides = config.slides.map((slide) =>
+          slide.id === currentSlideId
+            ? { ...slide, canvas: { ...state.canvas }, layers: cloneLayers(state.layers) }
+            : slide
+        );
+        updatedDeviceConfigs[selectedDeviceKey] = {
+          ...config,
+          slides: updatedSlides,
+          isModified: true,
+        };
+      }
+
+      set({
+        canvas: { ...state.canvas },
+        layers: cloneLayers(state.layers),
+        historyIndex: newIndex,
+        deviceConfigs: updatedDeviceConfigs,
+        isDirty: true,
+      });
+    }
+  },
+
+  redo: () => {
+    const { history, historyIndex, selectedDeviceKey, deviceConfigs, currentSlideId } = get();
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      const state = history[newIndex];
+
+      // Update current slide in device config
+      let updatedDeviceConfigs = { ...deviceConfigs };
+      if (selectedDeviceKey && updatedDeviceConfigs[selectedDeviceKey] && currentSlideId) {
+        const config = updatedDeviceConfigs[selectedDeviceKey];
+        const updatedSlides = config.slides.map((slide) =>
+          slide.id === currentSlideId
+            ? { ...slide, canvas: { ...state.canvas }, layers: cloneLayers(state.layers) }
+            : slide
+        );
+        updatedDeviceConfigs[selectedDeviceKey] = {
+          ...config,
+          slides: updatedSlides,
+          isModified: true,
+        };
+      }
+
+      set({
+        canvas: { ...state.canvas },
+        layers: cloneLayers(state.layers),
+        historyIndex: newIndex,
+        deviceConfigs: updatedDeviceConfigs,
+        isDirty: true,
+      });
+    }
+  },
+
+  setIsDirty: (isDirty) => set({ isDirty }),
+
+  reset: () => set(initialState),
+
+  initialize: (
+    baseCanvas,
+    baseLayers,
+    images,
+    exportSizes,
+    savedDeviceConfigs
+  ) => {
+    const normalizedLayers = normalizeLayers(baseLayers);
+
+    // Build device configs from saved or create new ones
+    const initialDeviceConfigs: DeviceConfigMap = {};
+
+    exportSizes.forEach((exportSize) => {
+      const key = `${exportSize.name}-${exportSize.width}x${exportSize.height}`;
+
+      if (savedDeviceConfigs && savedDeviceConfigs[key]) {
+        // Use saved device config - it should already have slides array
+        const savedConfig = savedDeviceConfigs[key];
+        
+        // Handle both old format (canvas/layers) and new format (slides)
+        if (savedConfig.slides && savedConfig.slides.length > 0) {
+          // New format with slides
+          initialDeviceConfigs[key] = {
+            exportSize: { ...savedConfig.exportSize },
+            slides: savedConfig.slides.map((slide) => ({
+              id: slide.id,
+              canvas: { ...slide.canvas },
+              layers: normalizeLayers(slide.layers),
+            })),
+            isModified: savedConfig.isModified,
+          };
+        } else {
+          // Old format - convert to slides (backward compatibility)
+          const oldCanvas = (savedConfig as any).canvas || {
+            width: exportSize.width,
+            height: exportSize.height,
+            backgroundColor: baseCanvas.backgroundColor,
+          };
+          const oldLayers = (savedConfig as any).layers || [];
+          
+          // Create 4 slides from the old format
+          const slides: SlideData[] = [];
+          for (let i = 0; i < 4; i++) {
+            slides.push({
+              id: generateSlideId(key, i),
+              canvas: { ...oldCanvas },
+              layers: normalizeLayers(oldLayers).map((layer) => ({
+                ...layer,
+                id: `${layer.id}-${i}`,
+              })),
+            });
+          }
+          
+          initialDeviceConfigs[key] = {
+            exportSize: { ...savedConfig.exportSize },
+            slides,
+            isModified: savedConfig.isModified,
+          };
+        }
+      } else {
+        // Create new device config with 4 slides
+        const scaleX = exportSize.width / baseCanvas.width;
+        const scaleY = exportSize.height / baseCanvas.height;
+
+        const scaledLayers = normalizedLayers.map((layer) => {
           const props = layer.properties as any;
           return {
             ...layer,
@@ -466,194 +737,72 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                 : props.shadowOffsetY,
             },
           };
-        }),
-      }));
-
-      set({
-        deviceConfigs: {
-          ...deviceConfigs,
-          [key]: {
-            exportSize,
-            slides: scaledSlides,
-            isModified: false,
-          },
-        },
-      });
-    }
-  },
-
-  setDeviceFrame: (frame) => {
-    const { deviceFrame } = get();
-    set({ deviceFrame: { ...deviceFrame, ...frame }, isDirty: true });
-  },
-
-  pushHistory: () => {
-    const { slides, history, historyIndex } = get();
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(JSON.parse(JSON.stringify(slides)));
-    set({
-      history: newHistory.slice(-50),
-      historyIndex: newHistory.length - 1,
-    });
-  },
-
-  undo: () => {
-    const { history, historyIndex } = get();
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      set({
-        slides: JSON.parse(JSON.stringify(history[newIndex])),
-        historyIndex: newIndex,
-        isDirty: true,
-      });
-    }
-  },
-
-  redo: () => {
-    const { history, historyIndex } = get();
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      set({
-        slides: JSON.parse(JSON.stringify(history[newIndex])),
-        historyIndex: newIndex,
-        isDirty: true,
-      });
-    }
-  },
-
-  setIsDirty: (isDirty) => set({ isDirty }),
-
-  reset: () => set(initialState),
-
-  initialize: (
-    canvas,
-    layers,
-    images,
-    exportSizes,
-    savedSlides,
-    savedDeviceConfigs,
-  ) => {
-    let initialSlides: Slide[];
-
-    const normalizedLayers = normalizeLayers(layers);
-
-    if (savedSlides && savedSlides.length > 0) {
-      initialSlides = savedSlides.map((slide, i) => ({
-        id: slide.id || `slide-${Date.now()}-${i}`,
-        canvas: { ...slide.canvas },
-        layers: normalizeLayers(slide.layers),
-      }));
-    } else {
-      initialSlides = [];
-      for (let i = 0; i < 5; i++) {
-        initialSlides.push({
-          id: `slide-${Date.now()}-${i}`,
-          canvas: { ...canvas },
-          layers: normalizedLayers.map((l) => ({
-            ...l,
-            id: `${l.id}-${i}`,
-            properties: { ...l.properties },
-          })),
         });
-      }
-    }
 
-    const initialDeviceConfigs: DeviceConfigMap = savedDeviceConfigs || {};
-
-    exportSizes.forEach((exportSize) => {
-      const key = `${exportSize.name}-${exportSize.width}x${exportSize.height}`;
-      if (!initialDeviceConfigs[key]) {
-        const baseCanvas = initialSlides[0]?.canvas || {
-          width: 1242,
-          height: 2688,
-          backgroundColor: "#D8E5D8",
+        const deviceCanvas: CanvasConfig = {
+          width: exportSize.width,
+          height: exportSize.height,
+          backgroundColor: baseCanvas.backgroundColor,
         };
-        const scaleX = exportSize.width / baseCanvas.width;
-        const scaleY = exportSize.height / baseCanvas.height;
 
-        const scaledSlides = initialSlides.map((slide) => ({
-          id: slide.id,
-          canvas: {
-            width: exportSize.width,
-            height: exportSize.height,
-            backgroundColor: slide.canvas.backgroundColor,
-          },
-          layers: slide.layers.map((layer) => {
-            const props = layer.properties as any;
-            return {
+        // Create 4 slides for this device
+        const slides: SlideData[] = [];
+        for (let i = 0; i < 4; i++) {
+          slides.push({
+            id: generateSlideId(key, i),
+            canvas: { ...deviceCanvas },
+            layers: scaledLayers.map((layer) => ({
               ...layer,
-              x: Math.round(layer.x * scaleX),
-              y: Math.round(layer.y * scaleY),
-              width: Math.round(layer.width * scaleX),
-              height: Math.round(layer.height * scaleY),
-              properties: {
-                ...props,
-                fontSize: props.fontSize
-                  ? Math.round(props.fontSize * Math.min(scaleX, scaleY))
-                  : props.fontSize,
-                offsetX: props.offsetX
-                  ? Math.round(props.offsetX * scaleX)
-                  : props.offsetX,
-                offsetY:
-                  props.offsetY !== undefined
-                    ? Math.round(props.offsetY * scaleY)
-                    : props.offsetY,
-                borderRadius: props.borderRadius
-                  ? Math.round(props.borderRadius * Math.min(scaleX, scaleY))
-                  : props.borderRadius,
-                shadowBlur: props.shadowBlur
-                  ? Math.round(props.shadowBlur * Math.min(scaleX, scaleY))
-                  : props.shadowBlur,
-                shadowOffsetX: props.shadowOffsetX
-                  ? Math.round(props.shadowOffsetX * scaleX)
-                  : props.shadowOffsetX,
-                shadowOffsetY: props.shadowOffsetY
-                  ? Math.round(props.shadowOffsetY * scaleY)
-                  : props.shadowOffsetY,
-              },
-            };
-          }),
-        }));
+              id: `${layer.id}-${i}`,
+              properties: { ...layer.properties },
+            })),
+          });
+        }
 
         initialDeviceConfigs[key] = {
           exportSize,
-          slides: scaledSlides,
+          slides,
           isModified: false,
         };
       }
     });
 
+    // Select default device (prefer iPhone)
     const iphoneExport = exportSizes.find(
       (s) =>
         s.name.toLowerCase().includes("iphone") ||
-        (s.platform === "ios" && !s.name.toLowerCase().includes("ipad")),
+        (s.platform === "ios" && !s.name.toLowerCase().includes("ipad"))
     );
     const defaultExport = iphoneExport || exportSizes[0];
     const defaultDeviceKey = defaultExport
       ? `${defaultExport.name}-${defaultExport.width}x${defaultExport.height}`
       : null;
 
-    const activeSlides =
-      defaultDeviceKey && initialDeviceConfigs[defaultDeviceKey]
-        ? initialDeviceConfigs[defaultDeviceKey].slides.map((slide) => ({
-            id: slide.id,
-            canvas: { ...slide.canvas },
-            layers: slide.layers.map((l) => ({
-              ...l,
-              properties: { ...l.properties },
-            })),
-          }))
-        : initialSlides;
+    // Get the active canvas/layers from the default device's first slide
+    const activeConfig = defaultDeviceKey
+      ? initialDeviceConfigs[defaultDeviceKey]
+      : null;
+    const firstSlide = activeConfig?.slides[0];
+
+    const activeCanvas = firstSlide?.canvas || baseCanvas;
+    const activeLayers = firstSlide?.layers || normalizedLayers;
+    const activeSlideId = firstSlide?.id || null;
 
     set({
-      slides: activeSlides,
-      currentSlideId: activeSlides[0]?.id || null,
+      canvas: { ...activeCanvas },
+      layers: cloneLayers(activeLayers),
       selectedLayerId: null,
       images,
       exportSizes,
       deviceConfigs: initialDeviceConfigs,
       selectedDeviceKey: defaultDeviceKey,
-      history: [JSON.parse(JSON.stringify(activeSlides))],
+      currentSlideId: activeSlideId,
+      history: [
+        {
+          canvas: { ...activeCanvas },
+          layers: cloneLayers(activeLayers),
+        },
+      ],
       historyIndex: 0,
       isDirty: false,
     });
