@@ -174,15 +174,8 @@ export default function ExportPage() {
       };
     }
 
-    const isImage = layer.type === "image" || layer.type === "screenshot";
-    const uniformScale = Math.min(scaleX, scaleY);
-
-    const width = isImage
-      ? layer.width * uniformScale * imgScale
-      : layer.width * scaleX * imgScale;
-    const height = isImage
-      ? layer.height * uniformScale * imgScale
-      : layer.height * scaleY * imgScale;
+    const width = layer.width * scaleX * imgScale;
+    const height = layer.height * scaleY * imgScale;
 
     let x: number;
     switch (anchorX) {
@@ -385,9 +378,9 @@ export default function ExportPage() {
               y: -pos.height / 2,
             });
 
-            if (borderRadius > 0) {
-              imageGroup.clipFunc((ctx) => {
-                ctx.beginPath();
+            imageGroup.clipFunc((ctx) => {
+              ctx.beginPath();
+              if (borderRadius > 0) {
                 ctx.moveTo(borderRadius, 0);
                 ctx.lineTo(pos.width - borderRadius, 0);
                 ctx.arcTo(pos.width, 0, pos.width, borderRadius, borderRadius);
@@ -397,16 +390,43 @@ export default function ExportPage() {
                 ctx.arcTo(0, pos.height, 0, pos.height - borderRadius, borderRadius);
                 ctx.lineTo(0, borderRadius);
                 ctx.arcTo(0, 0, borderRadius, 0, borderRadius);
-                ctx.closePath();
-              });
+              } else {
+                ctx.rect(0, 0, pos.width, pos.height);
+              }
+              ctx.closePath();
+            });
+
+            const imgNaturalWidth = img.naturalWidth;
+            const imgNaturalHeight = img.naturalHeight;
+            const containerWidth = pos.width;
+            const containerHeight = pos.height;
+            
+            const imgAspect = imgNaturalWidth / imgNaturalHeight;
+            const containerAspect = containerWidth / containerHeight;
+            
+            let drawWidth: number;
+            let drawHeight: number;
+            let drawX: number;
+            let drawY: number;
+            
+            if (imgAspect > containerAspect) {
+              drawHeight = containerHeight;
+              drawWidth = containerHeight * imgAspect;
+              drawX = (containerWidth - drawWidth) / 2;
+              drawY = 0;
+            } else {
+              drawWidth = containerWidth;
+              drawHeight = containerWidth / imgAspect;
+              drawX = 0;
+              drawY = (containerHeight - drawHeight) / 2;
             }
 
             imageGroup.add(
               new Konva.Image({
-                x: 0,
-                y: 0,
-                width: pos.width,
-                height: pos.height,
+                x: drawX,
+                y: drawY,
+                width: drawWidth,
+                height: drawHeight,
                 image: img,
               })
             );
