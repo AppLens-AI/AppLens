@@ -528,7 +528,7 @@ export function EditorPage() {
                   />
 
                   {currentSlideId !== slide.id && (
-                    <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-all rounded-lg flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
+                    <div className="absolute inset-0 z-10 bg-black/0 hover:bg-black/40 transition-all rounded-lg flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
