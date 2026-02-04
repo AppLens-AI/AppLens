@@ -1,4 +1,4 @@
-# SHOTIFY 🎨
+# AppLens 🎨
 
 <div align="center">
 
@@ -38,7 +38,7 @@
 ## 📋 Table of Contents
 
 - [Overview](#overview)
-- [What is SHOTIFY?](#what-is-shotify)
+- [What is AppLens?](#what-is-shotify)
 - [Key Features](#key-features)
 - [Technology Stack](#technology-stack)
 - [Project Architecture](#project-architecture)
@@ -54,13 +54,13 @@
 
 ## 🎯 Overview
 
-**SHOTIFY** is a full-stack web application designed to help developers and designers create professional app store screenshots and promotional graphics for iOS and Android applications. With an intuitive visual editor, pre-designed templates, and powerful customization options, SHOTIFY streamlines the process of creating stunning visuals for your mobile apps.
+**AppLens** is a full-stack web application designed to help developers and designers create professional app store screenshots and promotional graphics for iOS and Android applications. With an intuitive visual editor, pre-designed templates, and powerful customization options, AppLens streamlines the process of creating stunning visuals for your mobile apps.
 
 ---
 
-## 💡 What is SHOTIFY?
+## 💡 What is AppLens?
 
-SHOTIFY solves the common problem faced by mobile app developers: creating eye-catching, professional screenshots for app stores. Instead of spending hours in complex design tools, SHOTIFY provides:
+AppLens solves the common problem faced by mobile app developers: creating eye-catching, professional screenshots for app stores. Instead of spending hours in complex design tools, AppLens provides:
 
 - **Pre-designed Templates**: Start with beautiful, platform-specific templates for iOS and Android
 - **Visual Canvas Editor**: Drag-and-drop interface powered by Konva.js for intuitive editing
@@ -486,7 +486,7 @@ For questions, issues, or contributions, please open an issue on GitHub.
 
 <div align="center">
 
-**Made with ❤️ by the SHOTIFY Team**
+**Made with ❤️ by the AppLens Team**
 
 *Transforming app screenshots into art since 2026*
 
