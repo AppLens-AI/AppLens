@@ -122,13 +122,6 @@ const cloneLayers = (layers: LayerConfig[]): LayerConfig[] =>
     properties: { ...l.properties },
   }));
 
-// Helper to deep clone slide
-const cloneSlide = (slide: SlideData): SlideData => ({
-  id: slide.id,
-  canvas: { ...slide.canvas },
-  layers: cloneLayers(slide.layers),
-});
-
 // Generate unique slide ID
 const generateSlideId = (deviceKey: string, index: number): string => {
   const sanitizedKey = deviceKey.replace(/[^a-z0-9]/gi, "-");
