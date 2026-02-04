@@ -425,88 +425,122 @@ export default function ElementsPanel() {
         </div>
       )}
 
-      <Dialog
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        className="relative z-50"
-      >
-        <DialogBackdrop className="fixed inset-0 bg-black/50 backdrop-blur-md transition-opacity duration-300" />
+    <Dialog
+      open={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      className="relative z-50"
+    >
+      {/* Vibrant backdrop */}
+      <DialogBackdrop className="fixed inset-0 bg-black/70 backdrop-blur-xl transition-opacity duration-300" />
 
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <DialogPanel className="relative bg-gradient-to-b from-background to-surface/95 rounded-3xl shadow-2xl p-0 w-full max-w-lg mx-auto border border-border/50 overflow-hidden transition-all duration-300 scale-100">
-            <div className="relative px-6 pt-6 pb-4 border-b border-border/50">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-purple-500/5" />
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl">
-                    <Sparkles className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <div>
-                    <DialogTitle className="text-lg font-bold text-text-primary">
-                      Add Element
-                    </DialogTitle>
-                    <p className="text-xs text-text-muted">
-                      Choose an element type to add
-                    </p>
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <DialogPanel className="relative bg-white/10 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] w-full max-w-lg mx-auto border border-white/20 overflow-hidden transform transition-all duration-500 ease-out">
+          
+          {/* Decorative gradient blobs */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-400/30 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-400/30 to-transparent rounded-full blur-3xl" />
+          
+          {/* Header */}
+          <div className="relative px-8 pt-8 pb-6 border-b border-white/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {/* Animated icon */}
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl blur-md group-hover:blur-lg transition-all opacity-60" />
+                  <div className="relative p-3.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl shadow-lg transform group-hover:scale-110 transition-transform duration-300">
+                    <Sparkles className="w-6 h-6 text-white animate-pulse" strokeWidth={2.5} />
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-2 hover:bg-surface rounded-xl transition-colors"
-                >
-                  <X className="w-5 h-5 text-text-muted" />
-                </button>
+                
+                <div>
+                  <DialogTitle className="text-2xl font-black text-white mb-1 tracking-tight">
+                    Add Element
+                  </DialogTitle>
+                  <p className="text-sm text-white/70 font-medium">
+                    Choose your element type
+                  </p>
+                </div>
               </div>
-            </div>
-
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-4">
-                {elementTypes.map((el, index) => {
-                  const colors = colorVariants[el.color];
-                  return (
-                    <button
-                      key={el.type}
-                      onClick={() => handleAddElement(el.type)}
-                      className={`
-                        flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-border/50
-                        transition-all duration-200 ease-out
-                        hover:border-${el.color}-500/50 hover:shadow-lg hover:shadow-${el.color}-500/10
-                        hover:scale-[1.02] active:scale-[0.98]
-                        bg-gradient-to-b from-surface/50 to-transparent
-                        group
-                      `}
-                      style={{ animationDelay: `${index * 75}ms` }}
-                    >
-                      <div
-                        className={`p-4 rounded-2xl ${colors.bg} ${colors.text} transition-all duration-200 group-hover:scale-110 shadow-sm`}
-                      >
-                        {el.icon}
-                      </div>
-                      <div className="text-center">
-                        <span className="text-sm font-semibold text-text-primary block mb-0.5">
-                          {el.name}
-                        </span>
-                        <span className="text-xs text-text-muted">
-                          {el.description}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="px-6 pb-6">
+              
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="w-full py-3 bg-surface hover:bg-border/80 rounded-xl text-text-muted hover:text-text-primary font-medium text-sm transition-all duration-200"
+                className="group p-2.5 hover:bg-white/10 rounded-xl transition-all duration-200 backdrop-blur-sm"
               >
-                Cancel
+                <X className="w-5 h-5 text-white/70 group-hover:text-white transition-colors group-hover:rotate-90 duration-200" />
               </button>
             </div>
-          </DialogPanel>
-        </div>
-      </Dialog>
+          </div>
+
+          {/* Grid Content */}
+          <div className="relative p-8">
+            <div className="grid grid-cols-2 gap-4">
+              {elementTypes.map((el, index) => {
+                const colors = colorVariants[el.color];
+                return (
+                  <button
+                    key={el.type}
+                    onClick={() => handleAddElement(el.type)}
+                    className="group relative flex flex-col items-center gap-4 p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/30 hover:bg-white/10 transition-all duration-300 ease-out active:scale-95 overflow-hidden"
+                    style={{
+                      animationDelay: `${index * 60}ms`,
+                      animation: 'fadeSlideIn 0.5s ease-out forwards',
+                      opacity: 0
+                    }}
+                  >
+                    {/* Gradient overlay on hover */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${colors.bg} opacity-0 group-hover:opacity-20 transition-all duration-500`} />
+                    
+                    {/* Shimmer effect */}
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
+                    
+                    {/* Icon with glow */}
+                    <div className="relative">
+                      <div className={`absolute inset-0 ${colors.bg} opacity-40 blur-2xl scale-150 group-hover:opacity-70 transition-opacity duration-300`} />
+                      <div className={`relative p-4 rounded-2xl ${colors.bg} ${colors.text} shadow-xl transform group-hover:scale-110 group-hover:-rotate-6 transition-all duration-300`}>
+                        {el.icon}
+                      </div>
+                    </div>
+                    
+                    {/* Text */}
+                    <div className="text-center space-y-1 relative">
+                      <span className="text-sm font-bold text-white block">
+                        {el.name}
+                      </span>
+                      <span className="text-xs text-white/60 group-hover:text-white/80 transition-colors">
+                        {el.description}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="relative px-8 pb-8">
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="w-full py-3.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-white font-bold text-sm transition-all duration-200 border border-white/20 hover:border-white/30 active:scale-98 shadow-lg"
+            >
+              Cancel
+            </button>
+          </div>
+        </DialogPanel>
+      </div>
+
+      <style >{`
+        @keyframes fadeSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
+    </Dialog>
     </div>
   );
 }
