@@ -69,7 +69,7 @@ export default function MainLayout() {
                 </svg>
               </div>
               <span className="text-lg font-semibold text-gray-900">
-                Shotify
+                AppLens
               </span>
             </Link>
 
