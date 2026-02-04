@@ -20,11 +20,8 @@ const Navbar = () => {
             <img
               src="/logo.png"
               alt="Logo"
-              className="w-10 h-10 hidden sm:block"
+              className="w-30 h-10 hidden sm:block"
             />
-            <span className="font-display font-bold text-xl text-foreground">
-              Shotify
-            </span>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
