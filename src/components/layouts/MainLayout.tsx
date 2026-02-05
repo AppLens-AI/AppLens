@@ -43,6 +43,11 @@ export default function MainLayout() {
     return <Outlet />;
   }
 
+  const isSettingsPage = () => {
+    setShowUserMenu(false);
+    navigate("/settings");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border">
@@ -53,11 +58,11 @@ export default function MainLayout() {
                 className="flex items-center gap-3 mb-8 animate-slide-up opacity-0 stagger-1"
                 style={{ marginTop: 35 }}
               >
-                 <img
+                <img
                   src="/logo.png"
                   alt="Logo"
                   className="w-30 h-10 hidden sm:block"
-                 />
+                />
               </div>
             </Link>
 
@@ -115,12 +120,10 @@ export default function MainLayout() {
                   </div>
 
                   <div className="py-2">
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span>Profile</span>
-                    </button>
-
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors">
+                    <button
+                      onClick={isSettingsPage}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                    >
                       <Settings className="w-4 h-4 text-muted-foreground" />
                       <span>Settings</span>
                     </button>
