@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { SettingsSidebar, SettingsCategory } from "./SettingsSidebar";
 import { AccountSettings } from "./sections/AccountSettings";
-import { EditorSettings } from "./sections/EditorSettings";
-import { ExportSettings } from "./sections/ExportSettings";
 import { NotificationSettings } from "./sections/NotificationSettings";
 import { HelpSettings } from "./sections/HelpSettings";
 
@@ -14,10 +12,6 @@ export function SettingsLayout() {
     switch (activeCategory) {
       case "account":
         return <AccountSettings />;
-      case "editor":
-        return <EditorSettings />;
-      case "export":
-        return <ExportSettings />;
       case "notifications":
         return <NotificationSettings />;
       case "help":

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { User, Paintbrush, Download, Bell, HelpCircle } from "lucide-react";
+import { User, Bell, HelpCircle } from "lucide-react";
 
 export type SettingsCategory =
   | "account"
@@ -19,8 +19,6 @@ interface SettingsSidebarProps {
 
 const categories = [
   { id: "account" as const, label: "Account & Profile", icon: User },
-  { id: "editor" as const, label: "Editor Preferences", icon: Paintbrush },
-  { id: "export" as const, label: "Export Settings", icon: Download },
   { id: "notifications" as const, label: "Notifications", icon: Bell },
   { id: "help" as const, label: "Help & About", icon: HelpCircle },
 ];
