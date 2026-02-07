@@ -1,4 +1,13 @@
-export type AuthProvider = "local" | "google" | "github";
+export type AuthProvider = "local" | "google" | "github" | "apple";
+export type UserRole = "user" | "admin";
+
+export interface LinkedAccount {
+  provider: AuthProvider;
+  email: string;
+  name?: string;
+  avatar?: string;
+  linkedAt: string;
+}
 
 export interface User {
   id: string;
@@ -6,6 +15,9 @@ export interface User {
   name: string;
   avatar?: string;
   provider: AuthProvider;
+  role: UserRole;
+  linkedAccounts?: LinkedAccount[];
+  hasPassword: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -154,4 +166,116 @@ export interface ApiResponse<T> {
   message: string;
   data: T;
   error?: string;
+}
+
+// Session types
+export interface Session {
+  id: string;
+  deviceName: string;
+  browser: string;
+  os: string;
+  location?: string;
+  isCurrentDevice: boolean;
+  lastActiveAt: string;
+  createdAt: string;
+}
+
+// Notification types
+export type NotificationType = 
+  | "new_template" 
+  | "feature_update" 
+  | "system_announcement" 
+  | "export_complete";
+
+export interface NotificationPreferences {
+  id: string;
+  userId: string;
+  emailExportComplete: boolean;
+  emailWeeklyDigest: boolean;
+  emailNewTemplates: boolean;
+  emailFeatureUpdates: boolean;
+  emailSystemAnnouncements: boolean;
+  inAppExportComplete: boolean;
+  inAppNewTemplates: boolean;
+  inAppFeatureUpdates: boolean;
+  inAppSystemAnnouncements: boolean;
+  productAlerts: boolean;
+  marketingEmails: boolean;
+  updatedAt: string;
+}
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+// Feedback types
+export type FeedbackType = "bug_report" | "feature_request" | "general";
+export type FeedbackStatus = "pending" | "in_progress" | "resolved" | "closed";
+export type FeedbackPriority = "low" | "medium" | "high" | "critical";
+
+export interface Feedback {
+  id: string;
+  userId: string;
+  userEmail?: string;
+  userName?: string;
+  type: FeedbackType;
+  title: string;
+  description: string;
+  status: FeedbackStatus;
+  priority: FeedbackPriority;
+  category?: string;
+  browserInfo?: string;
+  appVersion?: string;
+  environment?: string;
+  adminNotes?: string;
+  adminResponse?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeedbackListResponse {
+  feedback: Feedback[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// App info
+export interface AppInfo {
+  version: string;
+  environment: string;
+  isProduction: boolean;
+  buildDate?: string;
+}
+
+// Admin types
+export interface AdminUser extends User {
+  projectCount: number;
+}
+
+export interface UserListResponse {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface DashboardStats {
+  totalUsers: number;
+  activeUsers: number;
+  totalFeedback: number;
+  pendingFeedback: number;
+  feedbackStats: {
+    byStatus: Record<string, number>;
+    byType: Record<string, number>;
+    total: number;
+  };
 }

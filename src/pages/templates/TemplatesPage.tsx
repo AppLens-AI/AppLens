@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { templatesApi, projectsApi } from "@/lib/api";
 import type { Template } from "@/types";
 import {
@@ -19,47 +20,39 @@ type PlatformFilter = "all" | "ios" | "android";
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<PlatformFilter>("all");
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
     null,
   );
   const [projectName, setProjectName] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
 
-  useEffect(() => {
-    fetchTemplates();
-  }, [filter]);
-
-  const fetchTemplates = async () => {
-    try {
+  const { data: templates = [], isLoading } = useQuery({
+    queryKey: ["templates", filter],
+    queryFn: async () => {
       const response = await templatesApi.getAll(
         filter === "all" ? undefined : filter,
       );
-      setTemplates(response.data.data || []);
-    } catch (error) {
-      console.error("Failed to fetch templates:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return response.data.data || [];
+    },
+  });
 
-  const handleCreateProject = async () => {
-    if (!selectedTemplate || !projectName.trim()) return;
-
-    setIsCreating(true);
-    try {
-      const response = await projectsApi.create({
-        templateId: selectedTemplate.id,
-        name: projectName.trim(),
-      });
+  const createProjectMutation = useMutation({
+    mutationFn: (data: { templateId: string; name: string }) =>
+      projectsApi.create(data),
+    onSuccess: (response) => {
       navigate(`/editor/${response.data.data.id}`);
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Failed to create project:", error);
-    } finally {
-      setIsCreating(false);
-    }
+    },
+  });
+
+  const handleCreateProject = () => {
+    if (!selectedTemplate || !projectName.trim()) return;
+    createProjectMutation.mutate({
+      templateId: selectedTemplate.id,
+      name: projectName.trim(),
+    });
   };
 
   const platformFilters: {
@@ -341,10 +334,10 @@ export default function TemplatesPage() {
               </button>
               <button
                 onClick={handleCreateProject}
-                disabled={isCreating || !projectName.trim()}
+                disabled={createProjectMutation.isPending || !projectName.trim()}
                 className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-primary-foreground font-medium bg-primary rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/25"
               >
-                {isCreating ? (
+                {createProjectMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Creating...
