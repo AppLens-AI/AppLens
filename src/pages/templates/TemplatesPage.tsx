@@ -173,14 +173,7 @@ export default function TemplatesPage() {
                     <Check className="w-4 h-4 text-white" />
                   </div>
                 )}
-
                 <div className="p-5">
-                  <div className="mb-4">
-                    <h3 className="text-xl font-semibold text-foreground mb-2">
-                      {template.name}
-                    </h3>
-                  </div>
-
                   {template.thumbnails && template.thumbnails.length > 0 ? (
                     <div className="relative group/scroll -mx-5 px-5">
                       {template.thumbnails.length > 3 && (
@@ -229,6 +222,26 @@ export default function TemplatesPage() {
                             />
                           </div>
                         ))}
+                      </div>
+                      <div className="mt-2">
+                        <h3 className="text-xl font-semibold text-foreground mb-2">
+                          {template.name}
+                        </h3>
+                        {Array.isArray(template?.jsonConfig?.exports) &&
+                          template?.jsonConfig?.exports.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {template.jsonConfig.exports.map(
+                                (device: any, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-secondary text-foreground border border-border"
+                                  >
+                                    {device.name}
+                                  </span>
+                                ),
+                              )}
+                            </div>
+                          )}
                       </div>
                     </div>
                   ) : (
@@ -334,7 +347,9 @@ export default function TemplatesPage() {
               </button>
               <button
                 onClick={handleCreateProject}
-                disabled={createProjectMutation.isPending || !projectName.trim()}
+                disabled={
+                  createProjectMutation.isPending || !projectName.trim()
+                }
                 className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-primary-foreground font-medium bg-primary rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/25"
               >
                 {createProjectMutation.isPending ? (
