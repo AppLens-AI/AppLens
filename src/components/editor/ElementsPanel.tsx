@@ -23,6 +23,7 @@ import {
   X,
   GripVertical,
 } from "lucide-react";
+import AddElementModal from "./AddElementModal";
 
 const layerIcons: Record<string, React.ReactNode> = {
   text: <Type className="w-4 h-4" />,
@@ -115,9 +116,7 @@ export default function ElementsPanel() {
 
   const handleAddElement = (elementType: string) => {
     const maxZIndex =
-      layers.length > 0
-        ? Math.max(...layers.map((l) => l.zIndex))
-        : 0;
+      layers.length > 0 ? Math.max(...layers.map((l) => l.zIndex)) : 0;
 
     const newLayerId = `layer-${Date.now()}`;
     let newLayer: any;
@@ -432,122 +431,11 @@ export default function ElementsPanel() {
         </div>
       )}
 
-    <Dialog
-      open={isModalOpen}
-      onClose={() => setIsModalOpen(false)}
-      className="relative z-50"
-    >
-      {/* Vibrant backdrop */}
-      <DialogBackdrop className="fixed inset-0 bg-black/70 backdrop-blur-xl transition-opacity duration-300" />
-
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <DialogPanel className="relative bg-white/10 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] w-full max-w-lg mx-auto border border-white/20 overflow-hidden transform transition-all duration-500 ease-out">
-          
-          {/* Decorative gradient blobs */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-400/30 to-transparent rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-400/30 to-transparent rounded-full blur-3xl" />
-          
-          {/* Header */}
-          <div className="relative px-8 pt-8 pb-6 border-b border-white/10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                {/* Animated icon */}
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl blur-md group-hover:blur-lg transition-all opacity-60" />
-                  <div className="relative p-3.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-                    <Sparkles className="w-6 h-6 text-white animate-pulse" strokeWidth={2.5} />
-                  </div>
-                </div>
-                
-                <div>
-                  <DialogTitle className="text-2xl font-black text-white mb-1 tracking-tight">
-                    Add Element
-                  </DialogTitle>
-                  <p className="text-sm text-white/70 font-medium">
-                    Choose your element type
-                  </p>
-                </div>
-              </div>
-              
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="group p-2.5 hover:bg-white/10 rounded-xl transition-all duration-200 backdrop-blur-sm"
-              >
-                <X className="w-5 h-5 text-white/70 group-hover:text-white transition-colors group-hover:rotate-90 duration-200" />
-              </button>
-            </div>
-          </div>
-
-          {/* Grid Content */}
-          <div className="relative p-8">
-            <div className="grid grid-cols-2 gap-4">
-              {elementTypes.map((el, index) => {
-                const colors = colorVariants[el.color];
-                return (
-                  <button
-                    key={el.type}
-                    onClick={() => handleAddElement(el.type)}
-                    className="group relative flex flex-col items-center gap-4 p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/30 hover:bg-white/10 transition-all duration-300 ease-out active:scale-95 overflow-hidden"
-                    style={{
-                      animationDelay: `${index * 60}ms`,
-                      animation: 'fadeSlideIn 0.5s ease-out forwards',
-                      opacity: 0
-                    }}
-                  >
-                    {/* Gradient overlay on hover */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${colors.bg} opacity-0 group-hover:opacity-20 transition-all duration-500`} />
-                    
-                    {/* Shimmer effect */}
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
-                    
-                    {/* Icon with glow */}
-                    <div className="relative">
-                      <div className={`absolute inset-0 ${colors.bg} opacity-40 blur-2xl scale-150 group-hover:opacity-70 transition-opacity duration-300`} />
-                      <div className={`relative p-4 rounded-2xl ${colors.bg} ${colors.text} shadow-xl transform group-hover:scale-110 group-hover:-rotate-6 transition-all duration-300`}>
-                        {el.icon}
-                      </div>
-                    </div>
-                    
-                    {/* Text */}
-                    <div className="text-center space-y-1 relative">
-                      <span className="text-sm font-bold text-white block">
-                        {el.name}
-                      </span>
-                      <span className="text-xs text-white/60 group-hover:text-white/80 transition-colors">
-                        {el.description}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="relative px-8 pb-8">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="w-full py-3.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-white font-bold text-sm transition-all duration-200 border border-white/20 hover:border-white/30 active:scale-98 shadow-lg"
-            >
-              Cancel
-            </button>
-          </div>
-        </DialogPanel>
-      </div>
-
-      <style >{`
-        @keyframes fadeSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px) scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-      `}</style>
-    </Dialog>
+      <AddElementModal
+        isModalOpen={isModalOpen}
+        setIsModalOpen={setIsModalOpen}
+        handleAddElement={handleAddElement}
+      />
     </div>
   );
 }
