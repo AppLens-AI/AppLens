@@ -216,6 +216,13 @@ export default function ElementsPanel() {
             offsetX: 0,
             offsetY: canvas.height / 2,
             scale: 1,
+            frameBorder: false,
+            frameBorderWidth: 8,
+            frameBorderColor: "#1a1a1a",
+            frameBorderRadiusTL: 24,
+            frameBorderRadiusTR: 24,
+            frameBorderRadiusBL: 4,
+            frameBorderRadiusBR: 4,
           },
         };
         break;

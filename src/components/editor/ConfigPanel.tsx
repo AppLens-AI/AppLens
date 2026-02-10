@@ -456,6 +456,70 @@ function ImagePropertiesPanel({
           </div>
         )}
 
+        {/* Frame Border Controls */}
+        <ToggleSwitch
+          label="Frame Border"
+          checked={props.frameBorder || false}
+          onChange={(v) => updateProps({ frameBorder: v })}
+        />
+
+        {props.frameBorder && (
+          <div className="space-y-3 pl-4 border-l-2 border-emerald-500/30">
+            <SliderInput
+              label="Border Width"
+              value={props.frameBorderWidth || 0}
+              onChange={(v) => updateProps({ frameBorderWidth: v })}
+              min={0}
+              max={50}
+              suffix="px"
+            />
+            <ColorInput
+              label="Border Color"
+              value={props.frameBorderColor || "#1a1a1a"}
+              onChange={(v) => updateProps({ frameBorderColor: v })}
+            />
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
+                Corner Radius
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <InputField
+                  label="Top Left"
+                  type="number"
+                  value={props.frameBorderRadiusTL ?? 0}
+                  onChange={(v) => updateProps({ frameBorderRadiusTL: parseFloat(v) || 0 })}
+                  min={0}
+                  max={200}
+                />
+                <InputField
+                  label="Top Right"
+                  type="number"
+                  value={props.frameBorderRadiusTR ?? 0}
+                  onChange={(v) => updateProps({ frameBorderRadiusTR: parseFloat(v) || 0 })}
+                  min={0}
+                  max={200}
+                />
+                <InputField
+                  label="Bottom Left"
+                  type="number"
+                  value={props.frameBorderRadiusBL ?? 0}
+                  onChange={(v) => updateProps({ frameBorderRadiusBL: parseFloat(v) || 0 })}
+                  min={0}
+                  max={200}
+                />
+                <InputField
+                  label="Bottom Right"
+                  type="number"
+                  value={props.frameBorderRadiusBR ?? 0}
+                  onChange={(v) => updateProps({ frameBorderRadiusBR: parseFloat(v) || 0 })}
+                  min={0}
+                  max={200}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Layout Controls */}
         <div className="pt-3 border-t border-border space-y-1.5">
           <label className="text-xs font-medium text-text-muted uppercase tracking-wider">

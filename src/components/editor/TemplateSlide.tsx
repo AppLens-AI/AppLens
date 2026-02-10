@@ -435,6 +435,15 @@ export default function TemplateSlide({
         const shadowOffsetY = (props.shadowOffsetY || 4) * scaleFactor;
         const shadowBlur = (props.shadowBlur || 20) * scaleFactor;
 
+        const hasFrameBorder = props.frameBorder && (props.frameBorderWidth || 0) > 0;
+        const frameBorderWidth = (props.frameBorderWidth || 0) * scaleFactor;
+        const frameBorderColor = props.frameBorderColor || "#1a1a1a";
+        const frameBorderRadiusTL = (props.frameBorderRadiusTL ?? borderRadius / scaleFactor) * scaleFactor;
+        const frameBorderRadiusTR = (props.frameBorderRadiusTR ?? borderRadius / scaleFactor) * scaleFactor;
+        const frameBorderRadiusBL = (props.frameBorderRadiusBL ?? borderRadius / scaleFactor) * scaleFactor;
+        const frameBorderRadiusBR = (props.frameBorderRadiusBR ?? borderRadius / scaleFactor) * scaleFactor;
+        const frameRadius = `${frameBorderRadiusTL}px ${frameBorderRadiusTR}px ${frameBorderRadiusBR}px ${frameBorderRadiusBL}px`;
+
         return (
           <div
             key={layer.id}
@@ -443,13 +452,17 @@ export default function TemplateSlide({
             style={{
               ...baseStyle,
               ...selectionStyle,
-              borderRadius: `${borderRadius}px`,
+              borderRadius: hasFrameBorder ? frameRadius : `${borderRadius}px`,
               overflow: "visible",
               boxShadow: props.shadow
                 ? `${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${
                     props.shadowColor || "rgba(0,0,0,0.25)"
                   }`
                 : "none",
+              border: hasFrameBorder
+                ? `${frameBorderWidth}px solid ${frameBorderColor}`
+                : "none",
+              boxSizing: "border-box",
               cursor: layer.locked || !isActive ? "default" : "move",
             }}
             className={`transition-all duration-150 ${
@@ -459,19 +472,17 @@ export default function TemplateSlide({
             }`}
           >
             {props.src ? (
-              <div className="relative w-full h-full">
+              <div className="relative w-full h-full" style={{ overflow: 'hidden', borderRadius: hasFrameBorder ? `${Math.max(0, frameBorderRadiusTL - frameBorderWidth)}px ${Math.max(0, frameBorderRadiusTR - frameBorderWidth)}px ${Math.max(0, frameBorderRadiusBR - frameBorderWidth)}px ${Math.max(0, frameBorderRadiusBL - frameBorderWidth)}px` : `${borderRadius}px` }}>
                 <img
                   src={props.src}
                   alt={layer.name}
                   className="w-full h-full object-cover"
-                  style={{ borderRadius: `${borderRadius}px` }}
                   draggable={false}
                 />
                 {isSelected && isActive && renderResizeHandles(layer, props)}
                 {isLoading && (
                   <div
                     className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200"
-                    style={{ borderRadius: `${borderRadius}px` }}
                   >
                     <div className="relative">
                       <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
@@ -485,7 +496,7 @@ export default function TemplateSlide({
             ) : (
               <div
                 className="w-full h-full bg-gradient-to-br from-secondary to-muted flex flex-col items-center justify-center gap-3 border-2 border-dashed border-border relative"
-                style={{ borderRadius: `${borderRadius}px` }}
+                style={{ borderRadius: hasFrameBorder ? `${Math.max(0, frameBorderRadiusTL - frameBorderWidth)}px ${Math.max(0, frameBorderRadiusTR - frameBorderWidth)}px ${Math.max(0, frameBorderRadiusBR - frameBorderWidth)}px ${Math.max(0, frameBorderRadiusBL - frameBorderWidth)}px` : `${borderRadius}px` }}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleLayerClick(e, layer.id);
