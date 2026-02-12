@@ -37,6 +37,12 @@ const Navbar = () => {
             >
               Templates
             </a>
+            <Link
+              to="/docs"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Docs
+            </Link>
           </div>
 
           <div className="hidden md:flex items-center gap-4">
@@ -81,6 +87,12 @@ const Navbar = () => {
               >
                 Templates
               </a>
+              <Link
+                to="/docs"
+                className="text-muted-foreground hover:text-foreground transition-colors py-2"
+              >
+                Docs
+              </Link>
               <hr className="border-border/50" />
               <Link
                 to="/login"
