@@ -14,6 +14,7 @@ import type {
 import TemplateSlide from "@/components/editor/TemplateSlide";
 import ConfigPanel from "@/components/editor/ConfigPanel";
 import ElementsPanel from "@/components/editor/ElementsPanel";
+import DeviceSettingsModal from "@/components/editor/DeviceSettingsModal";
 import {
   Loader2,
   Save,
@@ -27,6 +28,7 @@ import {
   Plus,
   Copy,
   Trash2,
+  Settings,
 } from "lucide-react";
 
 const getDeviceKey = (size: ExportSize) =>
@@ -89,6 +91,7 @@ export function EditorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeviceDropdownOpen, setIsDeviceDropdownOpen] = useState(false);
+  const [isDeviceSettingsOpen, setIsDeviceSettingsOpen] = useState(false);
 
   const slides = useMemo(
     () => getCurrentDeviceSlides(),
@@ -256,6 +259,7 @@ export function EditorPage() {
         layers: currentLayers,
         images,
         deviceConfigs: configs,
+        exportSizes: currentExportSizes,
       } = state;
 
       const updatedDeviceConfigs: DeviceConfigMap = {};
@@ -290,6 +294,7 @@ export function EditorPage() {
           canvas: baseConfig.canvas,
           layers: baseConfig.layers,
           images,
+          exports: currentExportSizes,
           deviceConfigs: updatedDeviceConfigs,
         },
       });
@@ -361,6 +366,14 @@ export function EditorPage() {
         </div> */}
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsDeviceSettingsOpen(true)}
+            className="p-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+            title="Device Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+
           <div className="relative" ref={deviceDropdownRef}>
             <button
               onClick={() => setIsDeviceDropdownOpen(!isDeviceDropdownOpen)}
@@ -615,6 +628,11 @@ export function EditorPage() {
         </div>
         <ConfigPanel />
       </div>
+
+      <DeviceSettingsModal
+        isOpen={isDeviceSettingsOpen}
+        onClose={() => setIsDeviceSettingsOpen(false)}
+      />
     </div>
   );
 }
