@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   LayerConfig,
   TextProperties,
@@ -55,11 +55,31 @@ export default function TemplateSlide({
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadingLayers, setLoadingLayers] = useState<Set<string>>(new Set());
   const [interaction, setInteraction] = useState<InteractionState | null>(null);
+  // Reactive scale factor — updated before paint and on container resize
+  const [scaleFactor, setScaleFactor] = useState(0);
+
+  // Compute scale synchronously after DOM update (before paint) so the first
+  // visible frame already uses the correct pixel sizes.
+  useLayoutEffect(() => {
+    if (containerRef.current) {
+      setScaleFactor(containerRef.current.offsetWidth / canvas.width);
+    }
+  }, [canvas.width, canvas.height, layers]);
+
+  // Keep scale in sync when the container is resized (window resize, panel toggle, etc.)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      setScaleFactor(el.offsetWidth / canvas.width);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [canvas.width]);
 
   const getScaleFactor = () => {
-    if (!containerRef.current) return 1;
-    const renderedWidth = containerRef.current.offsetWidth;
-    return renderedWidth / canvas.width;
+    if (!containerRef.current) return scaleFactor || 1;
+    return containerRef.current.offsetWidth / canvas.width;
   };
 
   const getCanvasPoint = (clientX: number, clientY: number) => {
@@ -356,7 +376,7 @@ export default function TemplateSlide({
   };
 
   const renderLayer = (layer: LayerConfig) => {
-    if (!layer.visible) return null;
+    if (!layer.visible || scaleFactor === 0) return null;
 
     const isSelected = selectedLayerId === layer.id && isActive;
 
@@ -373,7 +393,6 @@ export default function TemplateSlide({
         const props = normalizeLayerProperties<TextProperties>(
           layer.properties,
         );
-        const scaleFactor = getScaleFactor();
 
         const layoutConfig: LayoutConfig = {
           position: props.position || "center",
@@ -420,7 +439,6 @@ export default function TemplateSlide({
         const props = normalizeLayerProperties<ImageProperties>(
           layer.properties,
         );
-        const scaleFactor = getScaleFactor();
         const isLoading = loadingLayers.has(layer.id);
 
         const layoutConfig: LayoutConfig = {
@@ -566,7 +584,6 @@ export default function TemplateSlide({
         const props = normalizeLayerProperties<ShapeProperties>(
           layer.properties,
         );
-        const scaleFactor = getScaleFactor();
 
         const layoutConfig: LayoutConfig = {
           position: props.position || "center",
