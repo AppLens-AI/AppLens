@@ -11,8 +11,8 @@ interface SettingsSectionProps {
 export function SettingsSection({ title, description, children, className }: SettingsSectionProps) {
   return (
     <div className={cn("settings-card animate-fade-in", className)}>
-      <h3 className="settings-section-title">{title}</h3>
-      {description && <p className="settings-section-description">{description}</p>}
+      <h3 className="settings-section-title" style={description ? {}:{marginBottom: 10}}>{title}</h3>
+      {description && <p className="settings-section-description mb-2">{description}</p>}
       {children}
     </div>
   );
