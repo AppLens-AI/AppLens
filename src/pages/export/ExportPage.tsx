@@ -7,6 +7,7 @@ import type {
   TextProperties,
   ImageProperties,
   ShapeProperties,
+  GradientProperties,
   ExportSize,
   CanvasConfig,
   LayerConfig,
@@ -14,7 +15,14 @@ import type {
   DeviceConfig,
   SlideData,
 } from "@/types";
-import { normalizeLayerProperties, normalizeLayers } from "@/lib/layerUtils";
+import {
+  normalizeLayerProperties,
+  normalizeLayers,
+  resolveGradientColors,
+  resolveGradientAngle,
+  gradientToKonvaStops,
+  gradientLinearPoints,
+} from "@/lib/layerUtils";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import {
@@ -351,6 +359,51 @@ export default function ExportPage() {
           }
         }
 
+        if (layerConfig.type === "gradient") {
+          const props = normalizeLayerProperties<GradientProperties>(
+            layerConfig.properties,
+          );
+
+          const colors = resolveGradientColors(props);
+          const gradientType = props.gradientType || "linear";
+          const angle = resolveGradientAngle(props);
+          const w = exportSize.width;
+          const h = exportSize.height;
+          const konvaStops = gradientToKonvaStops(colors);
+
+          if (gradientType === "radial") {
+            const radius = Math.max(w, h) / 2;
+            layer.add(
+              new Konva.Rect({
+                x: 0,
+                y: 0,
+                width: w,
+                height: h,
+                opacity: layerConfig.opacity,
+                fillRadialGradientStartPoint: { x: w / 2, y: h / 2 },
+                fillRadialGradientEndPoint: { x: w / 2, y: h / 2 },
+                fillRadialGradientStartRadius: 0,
+                fillRadialGradientEndRadius: radius,
+                fillRadialGradientColorStops: konvaStops,
+              }),
+            );
+          } else {
+            const { start, end } = gradientLinearPoints(angle, w, h);
+            layer.add(
+              new Konva.Rect({
+                x: 0,
+                y: 0,
+                width: w,
+                height: h,
+                opacity: layerConfig.opacity,
+                fillLinearGradientStartPoint: start,
+                fillLinearGradientEndPoint: end,
+                fillLinearGradientColorStops: konvaStops,
+              }),
+            );
+          }
+        }
+
         if (layerConfig.type === "text") {
           const props = normalizeLayerProperties<TextProperties>(
             layerConfig.properties,
@@ -633,9 +686,18 @@ export default function ExportPage() {
       layer.draw();
 
       return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          try {
+            offscreenStage.destroy();
+            container.remove();
+          } catch (_) {}
+          resolve(null);
+        }, 15000);
+
         try {
           offscreenStage.toBlob({
             callback: (blob) => {
+              clearTimeout(timeout);
               offscreenStage.destroy();
               container.remove();
               resolve(blob);
@@ -644,6 +706,7 @@ export default function ExportPage() {
             pixelRatio: 1,
           });
         } catch (error) {
+          clearTimeout(timeout);
           console.error("Export error:", error);
           offscreenStage.destroy();
           container.remove();
