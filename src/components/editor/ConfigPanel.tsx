@@ -1,13 +1,19 @@
 import { useRef, useState } from "react";
 import { useEditorStore } from "@/stores/editorStore";
 import { uploadApi } from "@/lib/api";
-import { normalizeLayerProperties } from "@/lib/layerUtils";
+import {
+  normalizeLayerProperties,
+  resolveGradientColors,
+  gradientToCSS,
+} from "@/lib/layerUtils";
 import { AVAILABLE_FONTS, getFontsByCategory, getFontCategoryLabel, loadFont } from "@/lib/fonts";
 import type {
   LayerConfig,
   TextProperties,
   ImageProperties,
   ShapeProperties,
+  GradientProperties,
+  GradientStop,
 } from "@/types";
 import {
   ChevronDown,
@@ -653,6 +659,180 @@ function ShapePropertiesPanel({
   );
 }
 
+function GradientPropertiesPanel({
+  layer,
+  onUpdate,
+}: {
+  layer: LayerConfig;
+  onUpdate: (updates: Partial<LayerConfig>) => void;
+}) {
+  const props = normalizeLayerProperties<GradientProperties>(layer.properties);
+
+  const colors = resolveGradientColors(props);
+
+  const updateProps = (updates: Partial<GradientProperties>) => {
+    onUpdate({ properties: { ...props, ...updates } });
+  };
+
+  const updateColorStop = (index: number, updates: Partial<GradientStop>) => {
+    const newColors = colors.map((c, i) =>
+      i === index ? { ...c, ...updates } : c,
+    );
+    updateProps({ colors: newColors });
+  };
+
+  const gradientPreview = gradientToCSS(props);
+
+  return (
+    <AccordionSection
+      title="Gradient"
+      icon={<Palette className="w-4 h-4" />}
+    >
+      <div className="space-y-4">
+        <div
+          className="w-full h-16 rounded-lg border border-border"
+          style={{ background: gradientPreview }}
+        />
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
+            Type
+          </label>
+          <select
+            value={props.gradientType || "linear"}
+            onChange={(e) =>
+              updateProps({
+                gradientType: e.target.value as "linear" | "radial",
+              })
+            }
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
+          >
+            <option value="linear">Linear</option>
+            <option value="radial">Radial</option>
+          </select>
+        </div>
+
+        {(props.gradientType || "linear") === "linear" && (
+          <SliderInput
+            label="Angle"
+            value={props.angle || 180}
+            onChange={(v) => updateProps({ angle: v })}
+            min={0}
+            max={360}
+            step={1}
+            suffix="°"
+          />
+        )}
+
+        {/* Color Stops */}
+        <div className="space-y-3">
+          <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
+            Color Stops
+          </label>
+
+          {colors.map((stop, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-1.5 p-2 bg-background rounded-lg border border-border overflow-hidden"
+            >
+              <span className="text-[10px] text-text-muted flex-shrink-0 w-5">
+                {index === 0 ? "From" : "To"}
+              </span>
+              <input
+                type="color"
+                value={stop.color}
+                onChange={(e) =>
+                  updateColorStop(index, { color: e.target.value })
+                }
+                className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent flex-shrink-0"
+              />
+              <input
+                type="text"
+                value={stop.color}
+                onChange={(e) =>
+                  updateColorStop(index, { color: e.target.value })
+                }
+                className="min-w-0 flex-1 px-1 py-1 bg-surface border border-border rounded text-xs text-text-primary font-mono"
+                style={{ color: 'black' }}
+              />
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                <input
+                  type="number"
+                  value={stop.position}
+                  onChange={(e) =>
+                    updateColorStop(index, {
+                      position: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
+                    })
+                  }
+                  className="w-11 px-1 py-1 bg-surface border border-border rounded text-xs text-text-primary text-center"
+                  style={{ color: 'black' }}
+                  min={0}
+                  max={100}
+                />
+                <span className="text-[10px] text-text-muted">%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Quick Presets */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
+            Presets
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              [
+                { color: "#667eea", position: 0 },
+                { color: "#764ba2", position: 100 },
+              ],
+              [
+                { color: "#f093fb", position: 0 },
+                { color: "#f5576c", position: 100 },
+              ],
+              [
+                { color: "#4facfe", position: 0 },
+                { color: "#00f2fe", position: 100 },
+              ],
+              [
+                { color: "#43e97b", position: 0 },
+                { color: "#38f9d7", position: 100 },
+              ],
+              [
+                { color: "#fa709a", position: 0 },
+                { color: "#fee140", position: 100 },
+              ],
+              [
+                { color: "#a18cd1", position: 0 },
+                { color: "#fbc2eb", position: 100 },
+              ],
+              [
+                { color: "#fccb90", position: 0 },
+                { color: "#d57eeb", position: 100 },
+              ],
+              [
+                { color: "#0c3483", position: 0 },
+                { color: "#6b8cce", position: 100 },
+              ],
+            ].map((preset, i) => (
+              <button
+                key={i}
+                onClick={() =>
+                  updateProps({ colors: preset as GradientStop[] })
+                }
+                className="h-8 rounded-lg border border-border hover:border-emerald-500/50 transition-colors"
+                style={{
+                  background: `linear-gradient(135deg, ${preset.map((c) => `${c.color} ${c.position}%`).join(", ")})`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </AccordionSection>
+  );
+}
+
 function TransformPanel({
   layer,
   onUpdate,
@@ -857,6 +1037,12 @@ export default function ConfigPanel() {
             )}
             {selectedLayer.type === "shape" && (
               <ShapePropertiesPanel
+                layer={selectedLayer}
+                onUpdate={handleUpdate}
+              />
+            )}
+            {selectedLayer.type === "gradient" && (
+              <GradientPropertiesPanel
                 layer={selectedLayer}
                 onUpdate={handleUpdate}
               />

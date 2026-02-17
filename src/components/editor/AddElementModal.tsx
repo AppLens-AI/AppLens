@@ -52,6 +52,14 @@ const elementTypes = [
     enabled: true,
   },
   {
+    type: "background",
+    name: "Gradient",
+    description: "Gradient backgrounds",
+    icon: <Palette className="w-5 h-5" strokeWidth={2} />,
+    color: "emerald",
+    enabled: true,
+  },
+  {
     type: "rectangle",
     name: "Rectangle",
     description: "Coming soon",
@@ -113,14 +121,6 @@ const elementTypes = [
     description: "Coming soon",
     icon: <ArrowRight className="w-5 h-5" strokeWidth={2} />,
     color: "lime",
-    enabled: false,
-  },
-  {
-    type: "background",
-    name: "Background",
-    description: "Coming soon",
-    icon: <Palette className="w-5 h-5" strokeWidth={2} />,
-    color: "emerald",
     enabled: false,
   },
 ];

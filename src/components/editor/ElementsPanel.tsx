@@ -22,6 +22,7 @@ import {
   Sparkles,
   X,
   GripVertical,
+  Palette,
 } from "lucide-react";
 import AddElementModal from "./AddElementModal";
 
@@ -30,6 +31,7 @@ const layerIcons: Record<string, React.ReactNode> = {
   image: <Image className="w-4 h-4" />,
   screenshot: <Smartphone className="w-4 h-4" />,
   shape: <Square className="w-4 h-4" />,
+  gradient: <Palette className="w-4 h-4" />,
 };
 
 const elementTypes = [
@@ -251,6 +253,36 @@ export default function ElementsPanel() {
             anchorY: "center",
             offsetX: 0,
             offsetY: canvas.height / 2,
+          },
+        };
+        break;
+
+      case "background":
+        newLayer = {
+          id: newLayerId,
+          type: "gradient",
+          name: "Gradient",
+          x: 0,
+          y: 0,
+          width: canvas.width,
+          height: canvas.height,
+          rotation: 0,
+          visible: true,
+          locked: false,
+          opacity: 1,
+          zIndex: 0,
+          properties: {
+            gradientType: "linear",
+            angle: 180,
+            colors: [
+              { color: "#667eea", position: 0 },
+              { color: "#764ba2", position: 100 },
+            ],
+            position: "center",
+            anchorX: "center",
+            anchorY: "center",
+            offsetX: 0,
+            offsetY: 0,
           },
         };
         break;
