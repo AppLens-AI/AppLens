@@ -1,7 +1,6 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import StorySection from "@/components/StorySection";
-import DemoVideoSection from "@/components/DemoVideoSection";
 import TemplateCarousel from "@/components/TemplateCarousel";
 import FeatureHighlights from "@/components/FeatureHighlights";
 import SocialProofSection from "@/components/SocialProofSection";
@@ -15,7 +14,6 @@ const Index = () => {
       <main>
         <HeroSection />
         <StorySection />
-        <DemoVideoSection />
         <TemplateCarousel />
         <FeatureHighlights />
         <SocialProofSection />
