@@ -9,7 +9,6 @@ import {
   Pencil,
   Trash2,
   FolderOpen,
-  Smartphone,
   Search,
   Clock,
   ArrowUpRight,
