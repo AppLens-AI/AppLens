@@ -107,6 +107,12 @@ export interface ImageProperties {
   frameBorderRadiusTR?: number;
   frameBorderRadiusBL?: number;
   frameBorderRadiusBR?: number;
+  // 3D perspective properties
+  enable3D?: boolean;
+  perspective?: number;       // perspective distance (400–2000, default 1000)
+  rotateX?: number;           // X-axis rotation in degrees (-60 to 60)
+  rotateY?: number;           // Y-axis rotation in degrees (-60 to 60)
+  rotateZ?: number;           // Z-axis rotation in degrees (-60 to 60)
 }
 
 export interface GradientProperties {
