@@ -1,4 +1,10 @@
-import { LayerConfig, CanvasConfig, ExportSize, GradientProperties, GradientStop } from "@/types";
+import {
+  LayerConfig,
+  CanvasConfig,
+  ExportSize,
+  GradientProperties,
+  GradientStop,
+} from "@/types";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -22,10 +28,7 @@ export function resolveGradientColors(
   props: GradientProperties,
 ): [GradientStop, GradientStop] {
   const raw = Array.isArray(props.colors) ? props.colors.slice(0, 2) : [];
-  return [
-    raw[0] ?? DEFAULT_STOPS[0],
-    raw[1] ?? DEFAULT_STOPS[1],
-  ];
+  return [raw[0] ?? DEFAULT_STOPS[0], raw[1] ?? DEFAULT_STOPS[1]];
 }
 
 /** Safe angle – always a finite number, default 180. */
@@ -73,8 +76,14 @@ export function gradientLinearPoints(
 ): { start: { x: number; y: number }; end: { x: number; y: number } } {
   const rad = ((angle - 90) * Math.PI) / 180;
   return {
-    start: { x: w / 2 - (Math.cos(rad) * w) / 2, y: h / 2 - (Math.sin(rad) * h) / 2 },
-    end:   { x: w / 2 + (Math.cos(rad) * w) / 2, y: h / 2 + (Math.sin(rad) * h) / 2 },
+    start: {
+      x: w / 2 - (Math.cos(rad) * w) / 2,
+      y: h / 2 - (Math.sin(rad) * h) / 2,
+    },
+    end: {
+      x: w / 2 + (Math.cos(rad) * w) / 2,
+      y: h / 2 + (Math.sin(rad) * h) / 2,
+    },
   };
 }
 
@@ -116,11 +125,7 @@ export function clampBorderRadii(
 /**
  * Convenience overload: clamp a single uniform radius for all four corners.
  */
-export function clampUniformRadius(
-  w: number,
-  h: number,
-  r: number,
-): number {
+export function clampUniformRadius(w: number, h: number, r: number): number {
   return Math.min(r, w / 2, h / 2);
 }
 
@@ -387,12 +392,12 @@ export function calculateLayerStyle(
   } = layoutConfig;
 
   const isFullBackground =
-    (layer.type === "gradient") ||
+    layer.type === "gradient" ||
     (layer.type === "shape" &&
-    layer.x === 0 &&
-    layer.y === 0 &&
-    layer.width === canvas.width &&
-    layer.height === canvas.height);
+      layer.x === 0 &&
+      layer.y === 0 &&
+      layer.width === canvas.width &&
+      layer.height === canvas.height);
 
   if (isFullBackground) {
     return {
@@ -475,4 +480,219 @@ export function calculateLayerStyle(
     cursor: layer.locked ? "default" : "pointer",
     zIndex: layer.zIndex,
   };
+}
+
+// ── 3D perspective export helper ─────────────────────────────────────────────
+
+/**
+ * Render a source canvas through a CSS-style 3D perspective transform onto a
+ * canvas of the **same dimensions**.
+ *
+ * The caller is responsible for providing a source canvas with enough padding
+ * around the content to accommodate shadow overflow and 3D projection.
+ *
+ * The maths replicate the CSS transform chain
+ * `rotateX(a) rotateY(b) rotateZ(c)` with `perspective(d)` exactly:
+ *   - Rotation order: Rz applied first, then Ry, then Rx  (CSS right-to-left)
+ *   - Projection: scale = d / (d − z)  (CSS convention: +z = toward viewer)
+ *
+ * The image is subdivided into a 24×24 grid and texture-mapped with affine
+ * triangles so that the perspective warp is visually accurate.
+ */
+export function render3DToCanvas(
+  sourceCanvas: HTMLCanvasElement,
+  perspective: number,
+  rotateX: number,
+  rotateY: number,
+  rotateZ: number,
+): HTMLCanvasElement {
+  const w = sourceCanvas.width;
+  const h = sourceCanvas.height;
+
+  const result = document.createElement("canvas");
+  result.width = w;
+  result.height = h;
+  const rCtx = result.getContext("2d");
+
+  if (rCtx) {
+    const cx = w / 2;
+    const cy = h / 2;
+
+    // Convert to radians
+    const rx = (rotateX * Math.PI) / 180;
+    const ry = (rotateY * Math.PI) / 180;
+    const rz = (rotateZ * Math.PI) / 180;
+
+    const cosX = Math.cos(rx),
+      sinX = Math.sin(rx);
+    const cosY = Math.cos(ry),
+      sinY = Math.sin(ry);
+    const cosZ = Math.cos(rz),
+      sinZ = Math.sin(rz);
+
+    // CSS transform:  rotateX(a) · rotateY(b) · rotateZ(c)
+    // Matrix product:  Rx · Ry · Rz  →  apply Rz first, then Ry, then Rx.
+    const rotate3D = (x: number, y: number, z: number) => {
+      // Step 1 – Rz
+      const x1 = x * cosZ - y * sinZ;
+      const y1 = x * sinZ + y * cosZ;
+      // Step 2 – Ry  (z is unchanged by Rz)
+      const x2 = x1 * cosY + z * sinY;
+      const z2 = -x1 * sinY + z * cosY;
+      // Step 3 – Rx  (x is unchanged by Rx)
+      const y3 = y1 * cosX - z2 * sinX;
+      const z3 = y1 * sinX + z2 * cosX;
+      return { x: x2, y: y3, z: z3 };
+    };
+
+    // CSS perspective projection:  scale = d / (d − z)
+    //   z > 0  →  toward viewer  →  larger
+    //   z < 0  →  away from viewer  →  smaller
+    const project = (x: number, y: number, z: number) => {
+      const d = perspective;
+      const s = d / (d - z);
+      return { x: cx + x * s, y: cy + y * s };
+    };
+
+    // Project each grid vertex individually for correct perspective.
+    const hw = w / 2;
+    const hh = h / 2;
+    const projectVertex = (u: number, v: number) => {
+      const px = -hw + u * w;
+      const py = -hh + v * h;
+      const r = rotate3D(px, py, 0);
+      return project(r.x, r.y, r.z);
+    };
+
+    const subdivisions = 24;
+    for (let row = 0; row < subdivisions; row++) {
+      for (let col = 0; col < subdivisions; col++) {
+        const u0 = col / subdivisions;
+        const v0 = row / subdivisions;
+        const u1 = (col + 1) / subdivisions;
+        const v1 = (row + 1) / subdivisions;
+
+        const p00 = projectVertex(u0, v0);
+        const p10 = projectVertex(u1, v0);
+        const p01 = projectVertex(u0, v1);
+        const p11 = projectVertex(u1, v1);
+
+        const sx0 = u0 * w,
+          sy0 = v0 * h;
+        const sx1 = u1 * w,
+          sy1 = v1 * h;
+
+        // Two triangles per quad
+        drawTexturedTriangle(
+          rCtx,
+          sourceCanvas,
+          sx0,
+          sy0,
+          sx1,
+          sy0,
+          sx0,
+          sy1,
+          p00.x,
+          p00.y,
+          p10.x,
+          p10.y,
+          p01.x,
+          p01.y,
+        );
+        drawTexturedTriangle(
+          rCtx,
+          sourceCanvas,
+          sx1,
+          sy0,
+          sx1,
+          sy1,
+          sx0,
+          sy1,
+          p10.x,
+          p10.y,
+          p11.x,
+          p11.y,
+          p01.x,
+          p01.y,
+        );
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Draw a textured triangle onto a 2D canvas context using affine mapping.
+ * Each triangle's clip path is expanded ~1 px outward from its centroid
+ * so adjacent triangles overlap slightly, eliminating sub-pixel seam gaps
+ * that otherwise appear as a visible grid.
+ */
+function drawTexturedTriangle(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLCanvasElement | HTMLImageElement,
+  sx0: number,
+  sy0: number,
+  sx1: number,
+  sy1: number,
+  sx2: number,
+  sy2: number,
+  dx0: number,
+  dy0: number,
+  dx1: number,
+  dy1: number,
+  dx2: number,
+  dy2: number,
+) {
+  // Expand the clip triangle ~1 px outward from its centroid to cover seams
+  const EXPAND = 1.0;
+  const cxD = (dx0 + dx1 + dx2) / 3;
+  const cyD = (dy0 + dy1 + dy2) / 3;
+  const expand = (x: number, y: number) => {
+    const ex = x - cxD;
+    const ey = y - cyD;
+    const len = Math.sqrt(ex * ex + ey * ey) || 1;
+    return { x: x + (ex / len) * EXPAND, y: y + (ey / len) * EXPAND };
+  };
+  const e0 = expand(dx0, dy0);
+  const e1 = expand(dx1, dy1);
+  const e2 = expand(dx2, dy2);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(e0.x, e0.y);
+  ctx.lineTo(e1.x, e1.y);
+  ctx.lineTo(e2.x, e2.y);
+  ctx.closePath();
+  ctx.clip();
+
+  // Solve affine transform: source triangle → destination triangle
+  const denom = sx0 * (sy1 - sy2) + sx1 * (sy2 - sy0) + sx2 * (sy0 - sy1);
+  if (Math.abs(denom) < 1e-8) {
+    ctx.restore();
+    return;
+  }
+
+  const m11 =
+    (dx0 * (sy1 - sy2) + dx1 * (sy2 - sy0) + dx2 * (sy0 - sy1)) / denom;
+  const m12 =
+    (dx0 * (sx2 - sx1) + dx1 * (sx0 - sx2) + dx2 * (sx1 - sx0)) / denom;
+  const m13 =
+    (dx0 * (sx1 * sy2 - sx2 * sy1) +
+      dx1 * (sx2 * sy0 - sx0 * sy2) +
+      dx2 * (sx0 * sy1 - sx1 * sy0)) /
+    denom;
+  const m21 =
+    (dy0 * (sy1 - sy2) + dy1 * (sy2 - sy0) + dy2 * (sy0 - sy1)) / denom;
+  const m22 =
+    (dy0 * (sx2 - sx1) + dy1 * (sx0 - sx2) + dy2 * (sx1 - sx0)) / denom;
+  const m23 =
+    (dy0 * (sx1 * sy2 - sx2 * sy1) +
+      dy1 * (sx2 * sy0 - sx0 * sy2) +
+      dy2 * (sx0 * sy1 - sx1 * sy0)) /
+    denom;
+
+  ctx.setTransform(m11, m21, m12, m22, m13, m23);
+  ctx.drawImage(img, 0, 0);
+  ctx.restore();
 }

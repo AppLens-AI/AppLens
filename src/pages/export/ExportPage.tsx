@@ -25,6 +25,7 @@ import {
   calculateExportLayerPosition,
   clampBorderRadii,
   clampUniformRadius,
+  render3DToCanvas,
   TEXT_RENDER_PADDING,
 } from "@/lib/layerUtils";
 import JSZip from "jszip";
@@ -384,7 +385,7 @@ export default function ExportPage() {
     ctx.closePath();
   };
 
-  const renderImageToKonva = (
+  const renderImageToKonva = async (
     konvaLayer: Konva.Layer,
     layerConfig: LayerConfig,
     canvas: CanvasConfig,
@@ -646,7 +647,70 @@ export default function ExportPage() {
       outerGroup.add(borderRingShape);
     }
 
-    konvaLayer.add(outerGroup);
+    // ── 3D perspective rendering ────────────────────────────────────────
+    const is3D = props.enable3D || false;
+    const perspective3D = props.perspective ?? 1000;
+    const rotX = props.rotateX ?? 0;
+    const rotY = props.rotateY ?? 0;
+    const rotZ = props.rotateZ ?? 0;
+
+    if (is3D && (rotX !== 0 || rotY !== 0 || rotZ !== 0)) {
+      // Render the outerGroup to a flat canvas, then apply 3D warp.
+      const tempContainer = document.createElement("div");
+      tempContainer.style.position = "absolute";
+      tempContainer.style.left = "-99999px";
+      document.body.appendChild(tempContainer);
+
+      // Padding must cover shadow overflow (~3× blur) and 3D projection.
+      const pad = 2.0;
+      const stageW = Math.ceil(totalWidth * pad);
+      const stageH = Math.ceil(totalHeight * pad);
+
+      const tempStage = new Konva.Stage({
+        container: tempContainer,
+        width: stageW,
+        height: stageH,
+      });
+      const tempLayer = new Konva.Layer();
+      tempStage.add(tempLayer);
+
+      // Re-center the group within the padded stage
+      outerGroup.x(stageW / 2);
+      outerGroup.y(stageH / 2);
+      tempLayer.add(outerGroup);
+      tempLayer.draw();
+
+      const flatCanvas = tempStage.toCanvas({ pixelRatio: 1 });
+
+      // Apply 3D warp — perspective is scaled to export-pixel space.
+      // render3DToCanvas returns a canvas of the SAME dimensions (no
+      // additional padding), so the center stays aligned.
+      const warped = render3DToCanvas(
+        flatCanvas as HTMLCanvasElement,
+        perspective3D * scale,
+        rotX,
+        rotY,
+        rotZ,
+      );
+
+      tempStage.destroy();
+      tempContainer.remove();
+
+      // Place the warped canvas so its center aligns with the original
+      // image center on the main export canvas.
+      konvaLayer.add(
+        new Konva.Image({
+          x: pos.x + pos.width / 2 - warped.width / 2,
+          y: pos.y + pos.height / 2 - warped.height / 2,
+          width: warped.width,
+          height: warped.height,
+          image: warped,
+          opacity: layerConfig.opacity,
+        }),
+      );
+    } else {
+      konvaLayer.add(outerGroup);
+    }
   };
 
   const renderSlide = useCallback(
@@ -695,7 +759,7 @@ export default function ExportPage() {
             break;
           case "image":
           case "screenshot":
-            renderImageToKonva(layer, layerConfig, canvas, exportSize);
+            await renderImageToKonva(layer, layerConfig, canvas, exportSize);
             break;
         }
       }
