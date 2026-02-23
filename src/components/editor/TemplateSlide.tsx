@@ -477,6 +477,18 @@ export default function TemplateSlide({
           scaleFactor;
         const frameRadius = `${frameBorderRadiusTL}px ${frameBorderRadiusTR}px ${frameBorderRadiusBR}px ${frameBorderRadiusBL}px`;
 
+        const is3D = props.enable3D || false;
+        const perspective3D = props.perspective ?? 1000;
+        const rotX = props.rotateX ?? 0;
+        const rotY = props.rotateY ?? 0;
+        const rotZ = props.rotateZ ?? 0;
+
+        const baseTransform = baseStyle.transform || "";
+        const scaledPerspective = perspective3D * scaleFactor;
+        const transform3D = is3D
+          ? `${baseTransform} perspective(${scaledPerspective}px) rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg)`
+          : baseTransform;
+
         return (
           <div
             key={layer.id}
@@ -485,6 +497,8 @@ export default function TemplateSlide({
             style={{
               ...baseStyle,
               ...selectionStyle,
+              transform: transform3D,
+              transformStyle: is3D ? "preserve-3d" : undefined,
               borderRadius: hasFrameBorder ? frameRadius : `${borderRadius}px`,
               overflow: "visible",
               boxShadow: props.shadow

@@ -595,6 +595,54 @@ function ImagePropertiesPanel({
           max={150}
           suffix="%"
         />
+
+        {/* 3D Perspective Controls */}
+        <ToggleSwitch
+          label="3D View"
+          checked={props.enable3D || false}
+          onChange={(v) => updateProps({ enable3D: v })}
+        />
+
+        {props.enable3D && (
+          <div className="space-y-3 pl-4 border-l-2 border-emerald-500/30">
+            <SliderInput
+              label="Perspective"
+              value={props.perspective ?? 1000}
+              onChange={(v) => updateProps({ perspective: v })}
+              min={400}
+              max={2000}
+              step={50}
+              suffix="px"
+            />
+            <SliderInput
+              label="Rotate X"
+              value={props.rotateX ?? 0}
+              onChange={(v) => updateProps({ rotateX: v })}
+              min={-60}
+              max={60}
+              step={1}
+              suffix="°"
+            />
+            <SliderInput
+              label="Rotate Y"
+              value={props.rotateY ?? 0}
+              onChange={(v) => updateProps({ rotateY: v })}
+              min={-60}
+              max={60}
+              step={1}
+              suffix="°"
+            />
+            <SliderInput
+              label="Rotate Z"
+              value={props.rotateZ ?? 0}
+              onChange={(v) => updateProps({ rotateZ: v })}
+              min={-60}
+              max={60}
+              step={1}
+              suffix="°"
+            />
+          </div>
+        )}
       </div>
     </AccordionSection>
   );
