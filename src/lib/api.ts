@@ -187,6 +187,72 @@ export const adminApi = {
     api.get<ApiResponse<DashboardStats>>("/admin/dashboard/stats"),
 };
 
+// AI API
+export const aiApi = {
+  getProviders: () =>
+    api.get<ApiResponse<AIProvider[]>>("/ai/providers"),
+  getConfig: () =>
+    api.get<ApiResponse<AIConfigResponse>>("/ai/config"),
+  saveConfig: (data: { provider: string; apiKey: string; selectedModel?: string }) =>
+    api.post<ApiResponse<AIConfigResponse>>("/ai/config", data),
+  updateModel: (selectedModel: string) =>
+    api.put<ApiResponse<null>>("/ai/config/model", { selectedModel }),
+  deleteConfig: () =>
+    api.delete<ApiResponse<null>>("/ai/config"),
+  fetchModels: () =>
+    api.get<ApiResponse<AIModel[]>>("/ai/models"),
+  fetchModelsWithKey: (provider: string, apiKey: string) =>
+    api.get<ApiResponse<AIModel[]>>("/ai/models/validate", { params: { provider, apiKey } }),
+  generateText: (data: GenerateTextRequest) =>
+    api.post<ApiResponse<GenerateTextResponse>>("/ai/generate-text", data),
+};
+
+// AI Types used in api calls
+export interface AIProvider {
+  id: string;
+  name: string;
+  description: string;
+  modelsUrl: string;
+  docsUrl: string;
+  icon: string;
+}
+
+export interface AIModel {
+  id: string;
+  name: string;
+  provider: string;
+}
+
+export interface AIConfigResponse {
+  id: string;
+  provider: string;
+  maskedKey: string;
+  selectedModel: string;
+  isConfigured: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GenerateTextRequest {
+  currentText?: string;
+  appCategory?: string;
+  tone: "professional" | "playful" | "minimal" | "luxury" | "technical" | "casual";
+  textType: "tagline" | "subtitle" | "description" | "cta" | "feature_title" | "feature_description";
+  context?: string;
+  count?: number;
+}
+
+export interface GenerateTextResponse {
+  suggestions: TextSuggestion[];
+  model: string;
+  provider: string;
+}
+
+export interface TextSuggestion {
+  text: string;
+  tone: string;
+}
+
 export const getProxyImageUrl = (originalUrl: string): string => {
   if (!originalUrl) return "";
   const baseUrl = import.meta.env.VITE_API_URL || "/api";
