@@ -34,7 +34,9 @@ import {
   Lock,
   Unlock,
   Sparkles,
+  Wand2,
 } from "lucide-react";
+import { AITextModal } from "./AITextModal";
 
 interface AccordionSectionProps {
   title: string;
@@ -226,9 +228,11 @@ function ToggleSwitch({
 function TextPropertiesPanel({
   layer,
   onUpdate,
+  onAISuggest,
 }: {
   layer: LayerConfig;
   onUpdate: (updates: Partial<LayerConfig>) => void;
+  onAISuggest: () => void;
 }) {
   const props = normalizeLayerProperties<TextProperties>(layer.properties);
 
@@ -240,9 +244,19 @@ function TextPropertiesPanel({
     <AccordionSection title="Text" icon={<Type className="w-4 h-4" />}>
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
-            Content
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
+              Content
+            </label>
+            <button
+              onClick={onAISuggest}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-gradient-to-r from-emerald-500/15 to-teal-500/15 text-emerald-400 hover:from-emerald-500/25 hover:to-teal-500/25 transition-all border border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-sm hover:shadow-emerald-500/10"
+              title="AI Text Suggestions"
+            >
+              <Wand2 className="w-3 h-3" />
+              AI Suggest
+            </button>
+          </div>
           <textarea
             value={props.content}
             onChange={(e) => updateProps({ content: e.target.value })}
@@ -999,6 +1013,7 @@ function BackgroundPanel() {
 
 export default function ConfigPanel() {
   const { canvas, layers, selectedLayerId, updateLayer } = useEditorStore();
+  const [showAIModal, setShowAIModal] = useState(false);
 
   const selectedLayer = layers.find((l) => l.id === selectedLayerId);
 
@@ -1074,6 +1089,7 @@ export default function ConfigPanel() {
               <TextPropertiesPanel
                 layer={selectedLayer}
                 onUpdate={handleUpdate}
+                onAISuggest={() => setShowAIModal(true)}
               />
             )}
             {(selectedLayer.type === "image" ||
@@ -1127,6 +1143,25 @@ export default function ConfigPanel() {
           </>
         )}
       </div>
+
+      {/* AI Text Modal */}
+      <AITextModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        currentText={
+          selectedLayer?.type === "text"
+            ? (selectedLayer.properties as TextProperties).content || ""
+            : ""
+        }
+        onSelectText={(text) => {
+          if (selectedLayerId && selectedLayer?.type === "text") {
+            const props = selectedLayer.properties as TextProperties;
+            updateLayer(selectedLayerId, {
+              properties: { ...props, content: text },
+            });
+          }
+        }}
+      />
     </div>
   );
 }
