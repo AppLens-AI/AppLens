@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
-import { User, Bell, HelpCircle } from "lucide-react";
+import { User, Bell, HelpCircle, Sparkles } from "lucide-react";
 
 export type SettingsCategory =
   | "account"
+  | "ai"
   | "editor"
   | "projects"
   | "export"
@@ -19,6 +20,7 @@ interface SettingsSidebarProps {
 
 const categories = [
   { id: "account" as const, label: "Account & Profile", icon: User },
+  { id: "ai" as const, label: "AI Configuration", icon: Sparkles },
   { id: "notifications" as const, label: "Notifications", icon: Bell },
   { id: "help" as const, label: "Help & About", icon: HelpCircle },
 ];

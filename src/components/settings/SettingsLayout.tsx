@@ -1,17 +1,23 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { SettingsSidebar, SettingsCategory } from "./SettingsSidebar";
 import { AccountSettings } from "./sections/AccountSettings";
 import { NotificationSettings } from "./sections/NotificationSettings";
 import { HelpSettings } from "./sections/HelpSettings";
+import { AISettings } from "./sections/AISettings";
 
 export function SettingsLayout() {
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") as SettingsCategory | null;
   const [activeCategory, setActiveCategory] =
-    useState<SettingsCategory>("account");
+    useState<SettingsCategory>(initialTab || "account");
 
   const renderContent = () => {
     switch (activeCategory) {
       case "account":
         return <AccountSettings />;
+      case "ai":
+        return <AISettings />;
       case "notifications":
         return <NotificationSettings />;
       case "help":
