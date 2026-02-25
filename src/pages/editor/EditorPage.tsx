@@ -14,6 +14,7 @@ import type {
 import TemplateSlide from "@/components/editor/TemplateSlide";
 import ConfigPanel from "@/components/editor/ConfigPanel";
 import ElementsPanel from "@/components/editor/ElementsPanel";
+import AssetLibraryPanel from "@/components/editor/AssetLibraryPanel";
 import DeviceSettingsModal from "@/components/editor/DeviceSettingsModal";
 import {
   Loader2,
@@ -29,6 +30,8 @@ import {
   Copy,
   Trash2,
   Settings,
+  Layers,
+  FolderOpen,
 } from "lucide-react";
 
 const getDeviceKey = (size: ExportSize) =>
@@ -92,6 +95,7 @@ export function EditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeviceDropdownOpen, setIsDeviceDropdownOpen] = useState(false);
   const [isDeviceSettingsOpen, setIsDeviceSettingsOpen] = useState(false);
+  const [activeLeftPanel, setActiveLeftPanel] = useState<"layers" | "assets">("layers");
 
   const slides = useMemo(
     () => getCurrentDeviceSlides(),
@@ -559,7 +563,34 @@ export function EditorPage() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <ElementsPanel />
+        {/* Left icon toolbar */}
+        <div className="w-12 bg-background border-r border-border/50 flex flex-col items-center pt-3 gap-1.5 flex-shrink-0">
+          <button
+            onClick={() => setActiveLeftPanel("layers")}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 ${
+              activeLeftPanel === "layers"
+                ? "bg-emerald-500/15 text-emerald-500 shadow-sm shadow-emerald-500/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+            }`}
+            title="Layers"
+          >
+            <Layers className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setActiveLeftPanel("assets")}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 ${
+              activeLeftPanel === "assets"
+                ? "bg-emerald-500/15 text-emerald-500 shadow-sm shadow-emerald-500/10"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+            }`}
+            title="Asset Library"
+          >
+            <FolderOpen className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Left panel content */}
+        {activeLeftPanel === "layers" ? <ElementsPanel /> : <AssetLibraryPanel />}
 
         <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden relative flex flex-col">
           <div className="flex-1 overflow-x-auto overflow-y-hidden">

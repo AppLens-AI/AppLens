@@ -130,6 +130,15 @@
   .carousel-scroll::-webkit-scrollbar {
     display: none;
   }
+
+  .asset-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .asset-scroll::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer utilities {

@@ -310,3 +310,41 @@ export interface DashboardStats {
     total: number;
   };
 }
+
+// Asset Library types
+export interface Asset {
+  id: string;
+  name: string;
+  url: string;
+  type: "image" | "svg" | "icon";
+  mimeType: string;
+  size: number;
+  width?: number;
+  height?: number;
+  tags?: string[];
+  category?: string;
+  createdAt: string;
+}
+
+export interface AssetListResponse {
+  assets: Asset[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface StockImage {
+  id: string;
+  url: string;
+  thumbUrl: string;
+  smallUrl: string;
+  regularUrl: string;
+  fullUrl: string;
+  width: number;
+  height: number;
+  description?: string;
+  author: string;
+  authorUrl: string;
+  downloadUrl: string;
+}

@@ -10,6 +10,8 @@ import type {
   AppInfo,
   UserListResponse,
   DashboardStats,
+  AssetListResponse,
+  Asset,
 } from "@/types";
 
 interface ApiResponse<T> {
@@ -255,10 +257,35 @@ export interface TextSuggestion {
 
 export const getProxyImageUrl = (originalUrl: string): string => {
   if (!originalUrl) return "";
+  // Data URIs (e.g. inline SVG icons) don't need proxying
+  if (originalUrl.startsWith("data:")) return originalUrl;
   const baseUrl = import.meta.env.VITE_API_URL || "/api";
   // If the image is already served from our backend, return it directly
   if (originalUrl.startsWith(baseUrl) || originalUrl.startsWith("/api/uploads")) {
     return originalUrl;
   }
   return `${baseUrl}/proxy-image?url=${encodeURIComponent(originalUrl)}`;
+};
+
+// Asset Library API
+export const assetApi = {
+  upload: (file: File, type?: string, category?: string, tags?: string[]) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (type) formData.append("type", type);
+    if (category) formData.append("category", category);
+    if (tags?.length) formData.append("tags", tags.join(","));
+    return api.post<ApiResponse<Asset>>("/assets/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+  getAll: (type?: string, page = 1, pageSize = 50) =>
+    api.get<ApiResponse<AssetListResponse>>("/assets", {
+      params: { type, page, pageSize },
+    }),
+  search: (query: string, page = 1, pageSize = 50) =>
+    api.get<ApiResponse<AssetListResponse>>("/assets/search", {
+      params: { q: query, page, pageSize },
+    }),
+  delete: (id: string) => api.delete<ApiResponse<null>>(`/assets/${id}`),
 };

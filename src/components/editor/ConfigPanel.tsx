@@ -6,7 +6,12 @@ import {
   resolveGradientColors,
   gradientToCSS,
 } from "@/lib/layerUtils";
-import { AVAILABLE_FONTS, getFontsByCategory, getFontCategoryLabel, loadFont } from "@/lib/fonts";
+import {
+  AVAILABLE_FONTS,
+  getFontsByCategory,
+  getFontCategoryLabel,
+  loadFont,
+} from "@/lib/fonts";
 import type {
   LayerConfig,
   TextProperties,
@@ -281,7 +286,10 @@ function TextPropertiesPanel({
             style={{ fontFamily: props.fontFamily || "Inter" }}
           >
             {Object.entries(getFontsByCategory()).map(([category, fonts]) => (
-              <optgroup key={category} label={getFontCategoryLabel(category as any)}>
+              <optgroup
+                key={category}
+                label={getFontCategoryLabel(category as any)}
+              >
                 {fonts.map((font) => (
                   <option
                     key={font.value}
@@ -539,7 +547,9 @@ function ImagePropertiesPanel({
                   label="Top Left"
                   type="number"
                   value={props.frameBorderRadiusTL ?? 0}
-                  onChange={(v) => updateProps({ frameBorderRadiusTL: parseFloat(v) || 0 })}
+                  onChange={(v) =>
+                    updateProps({ frameBorderRadiusTL: parseFloat(v) || 0 })
+                  }
                   min={0}
                   max={200}
                 />
@@ -547,7 +557,9 @@ function ImagePropertiesPanel({
                   label="Top Right"
                   type="number"
                   value={props.frameBorderRadiusTR ?? 0}
-                  onChange={(v) => updateProps({ frameBorderRadiusTR: parseFloat(v) || 0 })}
+                  onChange={(v) =>
+                    updateProps({ frameBorderRadiusTR: parseFloat(v) || 0 })
+                  }
                   min={0}
                   max={200}
                 />
@@ -555,7 +567,9 @@ function ImagePropertiesPanel({
                   label="Bottom Left"
                   type="number"
                   value={props.frameBorderRadiusBL ?? 0}
-                  onChange={(v) => updateProps({ frameBorderRadiusBL: parseFloat(v) || 0 })}
+                  onChange={(v) =>
+                    updateProps({ frameBorderRadiusBL: parseFloat(v) || 0 })
+                  }
                   min={0}
                   max={200}
                 />
@@ -563,7 +577,9 @@ function ImagePropertiesPanel({
                   label="Bottom Right"
                   type="number"
                   value={props.frameBorderRadiusBR ?? 0}
-                  onChange={(v) => updateProps({ frameBorderRadiusBR: parseFloat(v) || 0 })}
+                  onChange={(v) =>
+                    updateProps({ frameBorderRadiusBR: parseFloat(v) || 0 })
+                  }
                   min={0}
                   max={200}
                 />
@@ -746,10 +762,7 @@ function GradientPropertiesPanel({
   const gradientPreview = gradientToCSS(props);
 
   return (
-    <AccordionSection
-      title="Gradient"
-      icon={<Palette className="w-4 h-4" />}
-    >
+    <AccordionSection title="Gradient" icon={<Palette className="w-4 h-4" />}>
       <div className="space-y-4">
         <div
           className="w-full h-16 rounded-lg border border-border"
@@ -815,7 +828,7 @@ function GradientPropertiesPanel({
                   updateColorStop(index, { color: e.target.value })
                 }
                 className="min-w-0 flex-1 px-1 py-1 bg-surface border border-border rounded text-xs text-text-primary font-mono"
-                style={{ color: 'black' }}
+                style={{ color: "black" }}
               />
               <div className="flex items-center gap-0.5 flex-shrink-0">
                 <input
@@ -823,11 +836,14 @@ function GradientPropertiesPanel({
                   value={stop.position}
                   onChange={(e) =>
                     updateColorStop(index, {
-                      position: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
+                      position: Math.min(
+                        100,
+                        Math.max(0, parseInt(e.target.value) || 0),
+                      ),
                     })
                   }
                   className="w-11 px-1 py-1 bg-surface border border-border rounded text-xs text-text-primary text-center"
-                  style={{ color: 'black' }}
+                  style={{ color: "black" }}
                   min={0}
                   max={100}
                 />
@@ -875,6 +891,18 @@ function GradientPropertiesPanel({
               [
                 { color: "#0c3483", position: 0 },
                 { color: "#6b8cce", position: 100 },
+              ],
+              [
+                { color: "#a8edea", position: 0 },
+                { color: "#fed6e3", position: 100 },
+              ],
+              [
+                { color: "#d4fc79", position: 0 },
+                { color: "#96e6a1", position: 100 },
+              ],
+              [
+                { color: "#84fab0", position: 0 },
+                { color: "#8fd3f4", position: 100 },
               ],
             ].map((preset, i) => (
               <button

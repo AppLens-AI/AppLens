@@ -122,7 +122,9 @@ export default function ExportPage() {
         const loadPromises = uniqueUrls.map((originalUrl) => {
           return new Promise<[string, HTMLImageElement]>((resolve) => {
             const img = new window.Image();
-            img.crossOrigin = "anonymous";
+            if (!originalUrl.startsWith("data:")) {
+              img.crossOrigin = "anonymous";
+            }
             img.onload = () => resolve([originalUrl, img]);
             img.onerror = () => resolve([originalUrl, img]);
             img.src = getProxyImageUrl(originalUrl);
