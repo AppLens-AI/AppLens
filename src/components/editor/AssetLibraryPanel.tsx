@@ -19,10 +19,9 @@ import {
   X,
   ImagePlus,
   FileImage,
-  SlidersHorizontal,
 } from "lucide-react";
 
-type TabId = "uploads" | "icons" | "stock";
+type TabId = "uploads" | "icons";
 
 interface Tab {
   id: TabId;
@@ -37,7 +36,6 @@ const TABS: Tab[] = [
     icon: <FolderOpen className="w-3.5 h-3.5" />,
   },
   { id: "icons", label: "Icons", icon: <Smile className="w-3.5 h-3.5" /> },
-  { id: "stock", label: "Stock", icon: <Image className="w-3.5 h-3.5" /> },
 ];
 
 export default function AssetLibraryPanel() {
@@ -105,7 +103,6 @@ export default function AssetLibraryPanel() {
           <div className="flex-1 overflow-hidden">
             {activeTab === "uploads" && <UploadedAssetsTab />}
             {activeTab === "icons" && <IconLibraryTab />}
-            {activeTab === "stock" && <StockImagesTab />}
           </div>
         </>
       )}
@@ -529,138 +526,6 @@ function IconLibraryTab() {
             ))}
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Stock Images Tab ────────────────────────────────────────────
-function StockImagesTab() {
-  const { canvas, addLayer, layers } = useEditorStore();
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Generate beautiful gradient placeholder images
-  const gradientImages = [
-    { id: "g1", colors: ["#667eea", "#764ba2"], name: "Purple Dream" },
-    { id: "g2", colors: ["#f093fb", "#f5576c"], name: "Pink Sunset" },
-    { id: "g3", colors: ["#4facfe", "#00f2fe"], name: "Ocean Blue" },
-    { id: "g4", colors: ["#43e97b", "#38f9d7"], name: "Emerald" },
-    { id: "g6", colors: ["#a18cd1", "#fbc2eb"], name: "Lavender" },
-    { id: "g7", colors: ["#fccb90", "#d57eeb"], name: "Peach" },
-    { id: "g8", colors: ["#0c3483", "#6b8cce"], name: "Deep Blue" },
-    { id: "g9", colors: ["#ff6b6b", "#feca57"], name: "Fire" },
-    { id: "g10", colors: ["#a8edea", "#fed6e3"], name: "Cotton Candy" },
-    { id: "g11", colors: ["#d4fc79", "#96e6a1"], name: "Fresh Lime" },
-    { id: "g12", colors: ["#84fab0", "#8fd3f4"], name: "Cool Breeze" },
-  ];
-
-  const handleAddGradientToCanvas = (gradient: (typeof gradientImages)[0]) => {
-    const maxZIndex =
-      layers.length > 0 ? Math.max(...layers.map((l) => l.zIndex)) : 0;
-
-    addLayer({
-      id: `layer-${Date.now()}`,
-      type: "gradient",
-      name: gradient.name,
-      x: 0,
-      y: 0,
-      width: canvas.width,
-      height: canvas.height,
-      rotation: 0,
-      visible: true,
-      locked: false,
-      opacity: 1,
-      zIndex: maxZIndex + 1,
-      properties: {
-        gradientType: "linear" as const,
-        angle: 135,
-        colors: [
-          { color: gradient.colors[0], position: 0 },
-          { color: gradient.colors[1], position: 100 },
-        ],
-        position: "center",
-        anchorX: "center",
-        anchorY: "center",
-        offsetX: 0,
-        offsetY: 0,
-      },
-    });
-  };
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Search */}
-      <div className="px-3 pt-2 pb-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search stock images..."
-            className="w-full pl-9 pr-8 py-2 bg-secondary/50 border border-border/50 rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all"
-          />
-        </div>
-      </div>
-
-      {/* Info card about Unsplash */}
-      <div className="px-3 pb-2">
-        <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
-          <div className="flex items-start gap-2">
-            <Image className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-xs font-medium text-emerald-400">
-                Stock Photos via Unsplash
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
-                Set your UNSPLASH_ACCESS_KEY in environment to enable free stock
-                photo search. For now, enjoy our gradient collection!
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Gradient presets */}
-      <div className="px-3 pb-1">
-        <div className="flex items-center gap-2 mb-2">
-          <SlidersHorizontal className="w-3 h-3 text-emerald-500" />
-          <span className="text-xs font-semibold text-foreground">
-            Gradient Backgrounds
-          </span>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-3 pb-3 asset-scroll">
-        <div className="grid grid-cols-2 gap-2">
-          {gradientImages
-            .filter(
-              (g) =>
-                !searchQuery ||
-                g.name.toLowerCase().includes(searchQuery.toLowerCase()),
-            )
-            .map((gradient) => (
-              <button
-                key={gradient.id}
-                onClick={() => handleAddGradientToCanvas(gradient)}
-                className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-border/30 hover:border-emerald-500/40 transition-all duration-200 hover:shadow-md hover:shadow-emerald-500/10 hover:scale-[1.02]"
-              >
-                <div
-                  className="w-full h-full"
-                  style={{
-                    background: `linear-gradient(135deg, ${gradient.colors[0]}, ${gradient.colors[1]})`,
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-200">
-                  <div className="absolute bottom-0 left-0 right-0 p-2">
-                    <p className="text-[10px] text-white/90 font-medium">
-                      {gradient.name}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
-        </div>
       </div>
     </div>
   );
