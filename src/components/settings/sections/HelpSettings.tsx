@@ -355,7 +355,7 @@ export function HelpSettings() {
             </span>
           </div>
           <a
-            href="https://github.com/your-repo/shotify/releases"
+            href="https://github.com/AppLens-AI/AppLens"
             target="_blank"
             rel="noopener noreferrer"
           >
