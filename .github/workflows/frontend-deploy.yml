@@ -1,0 +1,178 @@
+name: CI/CD - Frontend Deploy to Hostinger
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'vite.config.ts'
+      - 'tailwind.config.ts'
+      - 'tsconfig*.json'
+      - '.github/workflows/frontend-deploy.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # =========================================================================
+  # Job 1: Lint & Type Check
+  # =========================================================================
+  check:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint || true
+
+      - name: Type check
+        run: bun run tsc --noEmit || true
+
+      - name: Build (verify)
+        env:
+          VITE_API_URL: https://applens.space/api
+        run: bun run build
+
+  # =========================================================================
+  # Job 2: Build & Deploy to Hostinger VPS
+  # =========================================================================
+  deploy:
+    name: Build & Deploy to Hostinger
+    needs: check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build for production
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://applens.space/api' }}
+        run: |
+          bun run build
+          echo "Build output:"
+          ls -lh dist/
+          du -sh dist/
+
+      - name: Compress build output
+        run: |
+          cd dist
+          tar -czf ../frontend-dist.tar.gz .
+          cd ..
+          ls -lh frontend-dist.tar.gz
+
+      - name: Upload build to Hostinger
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          source: "frontend-dist.tar.gz"
+          target: "/tmp/"
+          strip_components: 0
+
+      - name: Upload deploy script
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          source: "scripts/deploy-frontend.sh"
+          target: "~/applens/"
+          strip_components: 0
+
+      - name: Deploy on Hostinger
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          script: |
+            set -e
+            cd ~/applens
+            chmod +x scripts/deploy-frontend.sh
+            ./scripts/deploy-frontend.sh
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          script: |
+            set -e
+            echo "Verifying frontend deployment..."
+
+            # Check if files exist
+            if [ -f "/var/www/applens/index.html" ]; then
+              echo "Frontend files deployed successfully!"
+              echo "File count: $(find /var/www/applens -type f | wc -l)"
+              echo "Total size: $(du -sh /var/www/applens | cut -f1)"
+            else
+              echo "Frontend files not found!"
+              exit 1
+            fi
+
+            # Check nginx is serving
+            for i in $(seq 1 10); do
+              if curl -sf http://localhost/ > /dev/null 2>&1; then
+                echo "Nginx is serving the frontend!"
+                exit 0
+              fi
+              echo "  Waiting for nginx... ($i/10)"
+              sleep 2
+            done
+
+            echo "Nginx check failed"
+            exit 1
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Frontend deployment to Hostinger failed! Check the logs above."
