@@ -44,36 +44,23 @@ export default function MainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-card/60 backdrop-blur-2xl">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
         <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link to="/dashboard" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                <svg
-                  className="w-5 h-5 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="3" />
-                  <rect
-                    x="7"
-                    y="7"
-                    width="10"
-                    height="10"
-                    rx="1"
-                    fill="currentColor"
-                  />
-                </svg>
-              </div>
-              <span className="text-lg font-semibold text-gray-900">
-                AppLens
-              </span>
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2.5 group flex-shrink-0"
+            >
+              <img
+                src="/logo.png"
+                alt="AppLens"
+                className="h-8 w-auto transition-transform duration-300 group-hover:scale-105"
+              />
             </Link>
 
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-0.5 px-1.5 py-1.5 rounded-xl bg-secondary/40 border border-border/40">
               {navItems.map(({ path, label, icon: Icon }) => {
                 const isActive = location.pathname === path;
                 return (
@@ -81,17 +68,20 @@ export default function MainLayout() {
                     key={path}
                     to={path}
                     className={`
-                      flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-                      transition-colors duration-150
+                      relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                      transition-all duration-200
                       ${
                         isActive
-                          ? "bg-emerald-50 text-emerald-600"
-                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                          ? "bg-primary/15 text-primary shadow-sm shadow-primary/10"
+                          : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]"
                       }
                     `}
                   >
                     <Icon className="w-4 h-4" />
                     {label}
+                    {isActive && (
+                      <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-primary rounded-full" />
+                    )}
                   </Link>
                 );
               })}
@@ -100,50 +90,60 @@ export default function MainLayout() {
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className={`
+                  flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-all duration-200
+                  ${showUserMenu ? "bg-secondary" : "hover:bg-white/[0.04]"}
+                `}
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-primary to-emerald-400 rounded-lg flex items-center justify-center shadow-md shadow-primary/20 ring-1 ring-white/10">
                   <User className="w-4 h-4 text-white" />
                 </div>
-                <span className="hidden sm:block text-sm font-medium text-gray-700">
+                <span className="hidden sm:block text-sm font-medium text-foreground">
                   {user?.name || "User"}
                 </span>
                 <ChevronDown
-                  className={`w-4 h-4 text-gray-400 transition-transform ${
+                  className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${
                     showUserMenu ? "rotate-180" : ""
                   }`}
                 />
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-scale-in">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">
+                <div className="absolute right-0 mt-2 w-60 bg-card border border-border/60 rounded-2xl shadow-2xl shadow-black/30 overflow-hidden animate-scale-in">
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                  <div className="px-4 py-3.5 border-b border-border/50 bg-secondary/30">
+                    <p className="text-sm font-semibold text-foreground">
                       {user?.name}
                     </p>
-                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
                       {user?.email}
                     </p>
                   </div>
 
-                  <div className="py-2">
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <User className="w-4 h-4 text-gray-400" />
+                  <div className="py-1.5 px-1.5">
+                    <button className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-white/[0.04] rounded-xl transition-colors">
+                      <div className="p-1.5 rounded-lg bg-secondary">
+                        <User className="w-3.5 h-3.5 text-muted-foreground" />
+                      </div>
                       <span>Profile</span>
                     </button>
 
-                    <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <Settings className="w-4 h-4 text-gray-400" />
+                    <button className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-white/[0.04] rounded-xl transition-colors">
+                      <div className="p-1.5 rounded-lg bg-secondary">
+                        <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+                      </div>
                       <span>Settings</span>
                     </button>
 
-                    <div className="my-1 h-px bg-gray-100" />
+                    <div className="my-1.5 h-px bg-border/40 mx-2" />
 
                     <button
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
                       onClick={handleLogout}
                     >
-                      <LogOut className="w-4 h-4" />
+                      <div className="p-1.5 rounded-lg bg-red-500/10">
+                        <LogOut className="w-3.5 h-3.5" />
+                      </div>
                       <span>Sign out</span>
                     </button>
                   </div>
