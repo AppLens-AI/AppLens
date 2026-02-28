@@ -59,8 +59,9 @@ export function AccountSettings() {
   const revokeSessionMutation = useMutation({
     mutationFn: (sessionId: string) => sessionsApi.revoke(sessionId),
     onSuccess: (_data, sessionId) => {
-      queryClient.setQueryData<Session[]>(["sessions"], (old) => 
-        old?.filter((s) => s.id !== sessionId) || []
+      queryClient.setQueryData<Session[]>(
+        ["sessions"],
+        (old) => old?.filter((s) => s.id !== sessionId) || [],
       );
       toast.success("Session revoked successfully");
     },
@@ -313,11 +314,11 @@ export function AccountSettings() {
         title="Connected Accounts"
         description="Link third-party accounts for faster login"
       >
-        <SettingsRow
-          label="Google"
-          description="Sign in with your Google account"
-        >
-          {isProviderLinked("google") ? (
+        {isProviderLinked("google") && (
+          <SettingsRow
+            label="Google"
+            description="Sign in with your Google account"
+          >
             <div className="flex items-center gap-2">
               <Badge
                 variant="secondary"
@@ -336,23 +337,14 @@ export function AccountSettings() {
                 </Button>
               )}
             </div>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => handleConnectAccount("google")}
-            >
-              <Chrome className="h-4 w-4" />
-              Connect
-            </Button>
-          )}
-        </SettingsRow>
-        <SettingsRow
-          label="GitHub"
-          description="Sign in with your GitHub account"
-        >
-          {isProviderLinked("github") ? (
+          </SettingsRow>
+        )}
+
+        {isProviderLinked("github") && (
+          <SettingsRow
+            label="GitHub"
+            description="Sign in with your GitHub account"
+          >
             <div className="flex items-center gap-2">
               <Badge
                 variant="secondary"
@@ -371,18 +363,8 @@ export function AccountSettings() {
                 </Button>
               )}
             </div>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => handleConnectAccount("github")}
-            >
-              <Github className="h-4 w-4" />
-              Connect
-            </Button>
-          )}
-        </SettingsRow>
+          </SettingsRow>
+        )}
       </SettingsSection>
 
       <SettingsSection
