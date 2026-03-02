@@ -6,7 +6,6 @@
 
 @layer base {
   :root {
-    /* Cinematic dark theme with emerald accents */
     --background: 220 20% 4%;
     --foreground: 0 0% 98%;
 
