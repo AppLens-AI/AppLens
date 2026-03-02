@@ -76,6 +76,14 @@ interface EditorState {
   isDirty: boolean;
   setIsDirty: (dirty: boolean) => void;
 
+  // Smart alignment settings
+  snapToGrid: boolean;
+  gridSize: number;
+  showSmartGuides: boolean;
+  setSnapToGrid: (enabled: boolean) => void;
+  setGridSize: (size: number) => void;
+  setShowSmartGuides: (enabled: boolean) => void;
+
   // Device frame settings
   deviceFrame: {
     type: "none" | "iphone" | "android" | "dynamic";
@@ -113,6 +121,9 @@ const initialState = {
   history: [] as { canvas: CanvasConfig; layers: LayerConfig[] }[],
   historyIndex: -1,
   isDirty: false,
+  snapToGrid: false,
+  gridSize: 20,
+  showSmartGuides: true,
   deviceFrame: {
     type: "dynamic" as const,
     orientation: "portrait" as const,
@@ -743,6 +754,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     set(updates);
   },
+
+  // ── Smart alignment settings ─────────────────────────────────────────────
+  setSnapToGrid: (enabled) => set({ snapToGrid: enabled }),
+  setGridSize: (size) => set({ gridSize: Math.max(5, Math.min(100, size)) }),
+  setShowSmartGuides: (enabled) => set({ showSmartGuides: enabled }),
 
   setDeviceFrame: (frame) => {
     const { deviceFrame } = get();

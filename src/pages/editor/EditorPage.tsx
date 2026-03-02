@@ -21,7 +21,6 @@ import {
   Save,
   Download,
   ArrowLeft,
-  RotateCcw,
   Smartphone,
   Tablet,
   ChevronDown,
@@ -32,6 +31,7 @@ import {
   Settings,
   Layers,
   FolderOpen,
+  ArrowRightLeft,
 } from "lucide-react";
 
 const getDeviceKey = (size: ExportSize) =>
@@ -71,7 +71,9 @@ export function EditorPage() {
   const {
     canvas,
     layers,
+    selectedLayerId,
     setSelectedLayerId,
+    updateLayer,
     undo,
     historyIndex,
     isDirty,
@@ -88,6 +90,9 @@ export function EditorPage() {
     addSlide,
     duplicateSlide,
     deleteSlide,
+    pushHistory,
+    snapToGrid,
+    setSnapToGrid,
   } = useEditorStore();
 
   const [project, setProject] = useState<Project | null>(null);
@@ -95,7 +100,10 @@ export function EditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeviceDropdownOpen, setIsDeviceDropdownOpen] = useState(false);
   const [isDeviceSettingsOpen, setIsDeviceSettingsOpen] = useState(false);
-  const [activeLeftPanel, setActiveLeftPanel] = useState<"layers" | "assets">("layers");
+  const [isBatchOpsOpen, setIsBatchOpsOpen] = useState(false);
+  const [activeLeftPanel, setActiveLeftPanel] = useState<"layers" | "assets">(
+    "layers",
+  );
 
   const slides = useMemo(
     () => getCurrentDeviceSlides(),
@@ -240,15 +248,71 @@ export function EditorPage() {
       } else if (isMod && e.key === "s") {
         e.preventDefault();
         handleSave();
+      } else if (isMod && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        setSnapToGrid(!snapToGrid);
       } else if (e.key === "Escape") {
         setSelectedLayerId(null);
         setIsDeviceDropdownOpen(false);
+      } else if (
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key) &&
+        selectedLayerId
+      ) {
+        // Nudge selected layer with arrow keys
+        const state = useEditorStore.getState();
+        const layer = state.layers.find((l) => l.id === selectedLayerId);
+        if (!layer || layer.locked) return;
+
+        e.preventDefault();
+        const nudgeAmount = e.shiftKey ? 10 : 1;
+        const props = layer.properties as any;
+        const currentOffsetX = props.offsetX || 0;
+        const currentOffsetY = props.offsetY !== undefined ? props.offsetY : 0;
+
+        let newOffsetX = currentOffsetX;
+        let newOffsetY = currentOffsetY;
+
+        switch (e.key) {
+          case "ArrowLeft":
+            newOffsetX = currentOffsetX - nudgeAmount;
+            break;
+          case "ArrowRight":
+            newOffsetX = currentOffsetX + nudgeAmount;
+            break;
+          case "ArrowUp":
+            newOffsetY = currentOffsetY - nudgeAmount;
+            break;
+          case "ArrowDown":
+            newOffsetY = currentOffsetY + nudgeAmount;
+            break;
+        }
+
+        pushHistory();
+        updateLayer(
+          selectedLayerId,
+          {
+            properties: {
+              ...props,
+              offsetX: newOffsetX,
+              offsetY: newOffsetY,
+            },
+          },
+          { pushToHistory: false },
+        );
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo, setSelectedLayerId]);
+  }, [
+    undo,
+    setSelectedLayerId,
+    selectedLayerId,
+    snapToGrid,
+    setSnapToGrid,
+    pushHistory,
+    updateLayer,
+  ]);
 
   const handleSave = useCallback(async () => {
     if (!project || isSaving) return;
@@ -590,7 +654,11 @@ export function EditorPage() {
         </div>
 
         {/* Left panel content */}
-        {activeLeftPanel === "layers" ? <ElementsPanel /> : <AssetLibraryPanel />}
+        {activeLeftPanel === "layers" ? (
+          <ElementsPanel />
+        ) : (
+          <AssetLibraryPanel />
+        )}
 
         <div className="flex-1 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden relative flex flex-col">
           <div className="flex-1 overflow-x-auto overflow-y-hidden">
