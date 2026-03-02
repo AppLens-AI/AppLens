@@ -4,31 +4,28 @@ on:
   push:
     branches: [master]
     paths:
-      - 'src/**'
-      - 'public/**'
-      - 'index.html'
-      - 'package.json'
-      - 'vite.config.ts'
-      - 'tailwind.config.ts'
-      - 'tsconfig*.json'
-      - '.github/workflows/frontend-deploy.yml'
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "vite.config.ts"
+      - "tailwind.config.ts"
+      - "tsconfig*.json"
+      - ".github/workflows/frontend-deploy.yml"
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Deployment environment'
+        description: "Deployment environment"
         required: true
-        default: 'production'
+        default: "production"
         type: choice
         options:
           - production
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: "20"
 
 jobs:
-  # =========================================================================
-  # Job 1: Lint & Type Check
-  # =========================================================================
   check:
     name: Lint & Type Check
     runs-on: ubuntu-latest
@@ -61,14 +58,11 @@ jobs:
           VITE_API_URL: https://applens.space/api
         run: bun run build
 
-  # =========================================================================
-  # Job 2: Build & Deploy to Hostinger VPS
-  # =========================================================================
   deploy:
     name: Build & Deploy to Hostinger
     needs: check
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/production'
+    if: github.ref == 'refs/heads/master'
 
     steps:
       - name: Checkout code
@@ -149,7 +143,6 @@ jobs:
             set -e
             echo "Verifying frontend deployment..."
 
-            # Check if files exist
             if [ -f "/var/www/applens/index.html" ]; then
               echo "Frontend files deployed successfully!"
               echo "File count: $(find /var/www/applens -type f | wc -l)"
@@ -159,7 +152,6 @@ jobs:
               exit 1
             fi
 
-            # Check nginx is serving
             for i in $(seq 1 10); do
               if curl -sf http://localhost/ > /dev/null 2>&1; then
                 echo "Nginx is serving the frontend!"
