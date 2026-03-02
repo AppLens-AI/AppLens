@@ -50,7 +50,7 @@ export default function TemplateSlide({
   isActive,
   onClick,
 }: TemplateSlideProps) {
-  const { selectedLayerId, setSelectedLayerId, updateLayer, pushHistory } =
+  const { selectedLayerId, setSelectedLayerId, updateLayer, pushHistory, snapToGrid, gridSize, showSmartGuides } =
     useEditorStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +58,7 @@ export default function TemplateSlide({
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadingLayers, setLoadingLayers] = useState<Set<string>>(new Set());
   const [interaction, setInteraction] = useState<InteractionState | null>(null);
+  const [smartGuides, setSmartGuides] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
   // Reactive scale factor — updated before paint and on container resize
   const [scaleFactor, setScaleFactor] = useState(0);
 
@@ -698,9 +699,98 @@ export default function TemplateSlide({
       const dx = pointer.x - interaction.startPointerX;
       const dy = pointer.y - interaction.startPointerY;
 
+      // ── Snap-to-grid helper ──────────────────────────────────
+      const snapValue = (val: number): number => {
+        if (!snapToGrid || gridSize <= 0) return val;
+        return Math.round(val / gridSize) * gridSize;
+      };
+
+      // ── Smart guide computation ─────────────────────────────
+      const SNAP_THRESHOLD = 8; // px in canvas space
+      const computeSmartGuidesForCenter = (cx: number, cy: number, w: number, h: number) => {
+        if (!showSmartGuides) { setSmartGuides({ x: [], y: [] }); return { snapDx: 0, snapDy: 0 }; }
+
+        const guidesX: number[] = [];
+        const guidesY: number[] = [];
+
+        // Canvas edges & center
+        const canvasAnchorsX = [0, canvas.width / 2, canvas.width];
+        const canvasAnchorsY = [0, canvas.height / 2, canvas.height];
+
+        // Element left/center/right edges
+        const elLeft = cx - w / 2;
+        const elCenterX = cx;
+        const elRight = cx + w / 2;
+        const elTop = cy - h / 2;
+        const elCenterY = cy;
+        const elBottom = cy + h / 2;
+
+        let snapDx = 0;
+        let snapDy = 0;
+
+        // Collect other layer positions for snapping
+        const otherLayers = layers.filter((l) => l.id !== interaction.layerId && l.visible);
+        const otherAnchorsX: number[] = [...canvasAnchorsX];
+        const otherAnchorsY: number[] = [...canvasAnchorsY];
+
+        otherLayers.forEach((otherLayer) => {
+          const oProps = otherLayer.properties as any;
+          const oAnchorX = oProps.anchorX || "center";
+          const oPosition = oProps.position || "center";
+          const oOffsetX = oProps.offsetX || 0;
+          const oOffsetY = oProps.offsetY !== undefined ? oProps.offsetY : 0;
+          const { centerX: oCX, centerY: oCY } = computeCenter(otherLayer, oAnchorX, oPosition, oOffsetX, oOffsetY);
+          otherAnchorsX.push(oCX - otherLayer.width / 2, oCX, oCX + otherLayer.width / 2);
+          otherAnchorsY.push(oCY - otherLayer.height / 2, oCY, oCY + otherLayer.height / 2);
+        });
+
+        // Snap X
+        const elXPts = [elLeft, elCenterX, elRight];
+        for (const elX of elXPts) {
+          for (const anchor of otherAnchorsX) {
+            if (Math.abs(elX - anchor) < SNAP_THRESHOLD) {
+              snapDx = anchor - elX;
+              guidesX.push(anchor);
+              break;
+            }
+          }
+          if (snapDx !== 0) break;
+        }
+
+        // Snap Y
+        const elYPts = [elTop, elCenterY, elBottom];
+        for (const elY of elYPts) {
+          for (const anchor of otherAnchorsY) {
+            if (Math.abs(elY - anchor) < SNAP_THRESHOLD) {
+              snapDy = anchor - elY;
+              guidesY.push(anchor);
+              break;
+            }
+          }
+          if (snapDy !== 0) break;
+        }
+
+        setSmartGuides({ x: guidesX, y: guidesY });
+        return { snapDx, snapDy };
+      };
+
       if (interaction.mode === "move") {
-        const newCenterX = interaction.startCenterX + dx;
-        const newCenterY = interaction.startCenterY + dy;
+        let newCenterX = interaction.startCenterX + dx;
+        let newCenterY = interaction.startCenterY + dy;
+
+        // Apply snap-to-grid
+        if (snapToGrid && gridSize > 0) {
+          newCenterX = snapValue(newCenterX);
+          newCenterY = snapValue(newCenterY);
+        }
+
+        // Apply smart guides snapping
+        const { snapDx, snapDy } = computeSmartGuidesForCenter(
+          newCenterX, newCenterY, layer.width, layer.height
+        );
+        newCenterX += snapDx;
+        newCenterY += snapDy;
+
         const { offsetX, offsetY } = centerToOffsets(
           newCenterX,
           newCenterY,
@@ -750,6 +840,12 @@ export default function TemplateSlide({
           newTop = interaction.startTop + dy;
         }
 
+        // Apply snap-to-grid for resize
+        if (snapToGrid && gridSize > 0) {
+          newWidth = snapValue(newWidth);
+          newHeight = snapValue(newHeight);
+        }
+
         const newCenterX = newLeft + newWidth / 2;
         const newCenterY = newTop + newHeight / 2;
 
@@ -778,7 +874,10 @@ export default function TemplateSlide({
       }
     };
 
-    const handlePointerUp = () => setInteraction(null);
+    const handlePointerUp = () => {
+      setInteraction(null);
+      setSmartGuides({ x: [], y: [] });
+    };
 
     window.addEventListener("mousemove", handlePointerMove);
     window.addEventListener("mouseup", handlePointerUp);
@@ -787,7 +886,7 @@ export default function TemplateSlide({
       window.removeEventListener("mousemove", handlePointerMove);
       window.removeEventListener("mouseup", handlePointerUp);
     };
-  }, [interaction, updateLayer, canvas]);
+  }, [interaction, updateLayer, canvas, snapToGrid, gridSize, showSmartGuides, layers]);
 
   return (
     <div
@@ -809,6 +908,57 @@ export default function TemplateSlide({
         style={{ backgroundColor }}
       >
         {sortedLayers.map(renderLayer)}
+
+        {/* Grid overlay */}
+        {isActive && snapToGrid && gridSize > 0 && scaleFactor > 0 && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 9998,
+              opacity: 0.12,
+              backgroundImage: `
+                linear-gradient(to right, #22c55e 1px, transparent 1px),
+                linear-gradient(to bottom, #22c55e 1px, transparent 1px)
+              `,
+              backgroundSize: `${gridSize * scaleFactor}px ${gridSize * scaleFactor}px`,
+            }}
+          />
+        )}
+
+        {/* Smart guide lines */}
+        {isActive && interaction && (smartGuides.x.length > 0 || smartGuides.y.length > 0) && scaleFactor > 0 && (
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 9999 }}
+          >
+            {smartGuides.x.map((x, i) => (
+              <line
+                key={`gx-${i}`}
+                x1={`${(x / canvas.width) * 100}%`}
+                y1="0"
+                x2={`${(x / canvas.width) * 100}%`}
+                y2="100%"
+                stroke="#f43f5e"
+                strokeWidth="1"
+                strokeDasharray="4 3"
+                opacity="0.8"
+              />
+            ))}
+            {smartGuides.y.map((y, i) => (
+              <line
+                key={`gy-${i}`}
+                x1="0"
+                y1={`${(y / canvas.height) * 100}%`}
+                x2="100%"
+                y2={`${(y / canvas.height) * 100}%`}
+                stroke="#f43f5e"
+                strokeWidth="1"
+                strokeDasharray="4 3"
+                opacity="0.8"
+              />
+            ))}
+          </svg>
+        )}
       </div>
 
       <input
