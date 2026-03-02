@@ -110,7 +110,6 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
             </Route>
 
-            {/* Admin Routes */}
             <Route
               element={
                 <AdminRoute>
