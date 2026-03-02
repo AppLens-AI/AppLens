@@ -40,8 +40,10 @@ import {
   Unlock,
   Sparkles,
   Wand2,
+  Crosshair,
 } from "lucide-react";
 import { AITextModal } from "./AITextModal";
+import AlignmentToolbar from "./AlignmentToolbar";
 
 interface AccordionSectionProps {
   title: string;
@@ -1141,10 +1143,26 @@ export default function ConfigPanel() {
             )}
 
             <TransformPanel layer={selectedLayer} onUpdate={handleUpdate} />
+
+            <AccordionSection
+              title="Alignment"
+              icon={<Crosshair className="w-4 h-4" />}
+              defaultOpen={false}
+            >
+              <AlignmentToolbar />
+            </AccordionSection>
           </>
         ) : (
           <>
             <BackgroundPanel />
+
+            <AccordionSection
+              title="Alignment"
+              icon={<Crosshair className="w-4 h-4" />}
+              defaultOpen={true}
+            >
+              <AlignmentToolbar />
+            </AccordionSection>
 
             <div className="p-4 bg-surface rounded-xl border border-border">
               <div className="flex items-center gap-2 mb-3">
