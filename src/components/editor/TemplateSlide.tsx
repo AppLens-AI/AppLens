@@ -914,7 +914,7 @@ export default function TemplateSlide({
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              zIndex: 9998,
+              zIndex: 9997,
               opacity: 0.12,
               backgroundImage: `
                 linear-gradient(to right, #22c55e 1px, transparent 1px),
@@ -929,7 +929,7 @@ export default function TemplateSlide({
         {isActive && interaction && (smartGuides.x.length > 0 || smartGuides.y.length > 0) && scaleFactor > 0 && (
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ zIndex: 9999 }}
+            style={{ zIndex: 9998 }}
           >
             {smartGuides.x.map((x, i) => (
               <line

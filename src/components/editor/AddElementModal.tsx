@@ -216,6 +216,7 @@ export default function AddElementModal({
       open={isModalOpen}
       onClose={() => setIsModalOpen(false)}
       className="relative z-50"
+      style={{zIndex: 9999}}
     >
       {/* Dark backdrop */}
       <DialogBackdrop className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300" />
