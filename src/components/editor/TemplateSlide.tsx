@@ -5,7 +5,7 @@ import type {
   ImageProperties,
   ShapeProperties,
   GradientProperties,
-  CanvasConfig,
+  BackgroundColorProperties,
 } from "@/types";
 import { useEditorStore } from "@/stores/editorStore";
 import { uploadApi } from "@/lib/api";
@@ -665,6 +665,43 @@ export default function TemplateSlide({
               zIndex: layer.zIndex,
               cursor: layer.locked || !isActive ? "default" : "move",
               ...selectionStyle,
+            }}
+            className={`transition-all duration-150 ${
+              !layer.locked
+                ? "hover:outline hover:outline-2 hover:outline-emerald-400/50 hover:outline-offset-2"
+                : ""
+            }`}
+          >
+            {isSelected && isActive && renderResizeHandles(layer, props)}
+          </div>
+        );
+      }
+
+      case "backgroundColor": {
+        const props = normalizeLayerProperties<BackgroundColorProperties>(
+          layer.properties,
+        );
+
+        const layoutConfig: LayoutConfig = {
+          position: props.position || "center",
+          anchorX: props.anchorX || "center",
+          anchorY: props.anchorY || "center",
+          offsetX: props.offsetX || 0,
+          offsetY: props.offsetY !== undefined ? props.offsetY : 0,
+        };
+
+        const baseStyle = calculateLayerStyle(layer, canvas, layoutConfig);
+
+        return (
+          <div
+            key={layer.id}
+            onClick={(e) => handleLayerClick(e, layer.id)}
+            onMouseDown={(e) => startMove(e, layer, props)}
+            style={{
+              ...baseStyle,
+              ...selectionStyle,
+              backgroundColor: props.color || "#ffffff",
+              cursor: layer.locked || !isActive ? "default" : "move",
             }}
             className={`transition-all duration-150 ${
               !layer.locked

@@ -263,7 +263,7 @@ export function isLayerFullBackground(
 ): boolean {
   return (
     layer.type === "gradient" ||
-    (layer.type === "shape" &&
+    ((layer.type === "backgroundColor" || layer.type === "shape") &&
       layer.x === 0 &&
       layer.y === 0 &&
       layer.width === canvas.width &&
@@ -393,7 +393,7 @@ export function calculateLayerStyle(
 
   const isFullBackground =
     layer.type === "gradient" ||
-    (layer.type === "shape" &&
+    ((layer.type === "backgroundColor" || layer.type === "shape") &&
       layer.x === 0 &&
       layer.y === 0 &&
       layer.width === canvas.width &&

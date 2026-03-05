@@ -31,7 +31,6 @@ import {
   Settings,
   Layers,
   FolderOpen,
-  ArrowRightLeft,
 } from "lucide-react";
 
 const getDeviceKey = (size: ExportSize) =>
@@ -75,7 +74,6 @@ export function EditorPage() {
     setSelectedLayerId,
     updateLayer,
     undo,
-    historyIndex,
     isDirty,
     setIsDirty,
     initialize,
