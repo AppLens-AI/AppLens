@@ -60,6 +60,14 @@ const elementTypes = [
     enabled: true,
   },
   {
+    type: "bgColor",
+    name: "Solid Color",
+    description: "Solid color background",
+    icon: <Square className="w-5 h-5" strokeWidth={2} />,
+    color: "teal",
+    enabled: true,
+  },
+  {
     type: "rectangle",
     name: "Rectangle",
     description: "Coming soon",

@@ -18,6 +18,7 @@ import type {
   ImageProperties,
   ShapeProperties,
   GradientProperties,
+  BackgroundColorProperties,
   GradientStop,
 } from "@/types";
 import {
@@ -925,6 +926,83 @@ function GradientPropertiesPanel({
   );
 }
 
+function BackgroundColorPropertiesPanel({
+  layer,
+  onUpdate,
+}: {
+  layer: LayerConfig;
+  onUpdate: (updates: Partial<LayerConfig>) => void;
+}) {
+  const props = normalizeLayerProperties<BackgroundColorProperties>(layer.properties);
+
+  const updateProps = (updates: Partial<BackgroundColorProperties>) => {
+    onUpdate({ properties: { ...props, ...updates } });
+  };
+
+  const presetColors = [
+    "#1a1a2e",
+    "#16213e",
+    "#0f3460",
+    "#e94560",
+    "#533483",
+    "#0B0B0B",
+    "#1b2838",
+    "#2d3436",
+    "#D8E5D8",
+    "#E8D8E5",
+    "#D8E0E5",
+    "#E5E5D8",
+    "#E5D8D8",
+    "#ffffff",
+    "#f8f9fa",
+    "#dee2e6",
+    "#ffecd2",
+    "#fcb69f",
+    "#a1c4fd",
+    "#c2e9fb",
+  ];
+
+  return (
+    <AccordionSection title="Background Color" icon={<Square className="w-4 h-4" />}>
+      <div className="space-y-4">
+        {/* Color preview */}
+        <div
+          className="w-full h-16 rounded-lg border border-border"
+          style={{ backgroundColor: props.color || "#ffffff" }}
+        />
+
+        {/* Color picker */}
+        <ColorInput
+          label="Color"
+          value={props.color || "#ffffff"}
+          onChange={(color) => updateProps({ color })}
+        />
+
+        {/* Presets */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-text-muted uppercase tracking-wider">
+            Presets
+          </label>
+          <div className="grid grid-cols-5 gap-2">
+            {presetColors.map((color) => (
+              <button
+                key={color}
+                onClick={() => updateProps({ color })}
+                className={`w-full aspect-square rounded-lg border-2 transition-all hover:scale-110 ${
+                  props.color === color
+                    ? "border-emerald-500 ring-2 ring-emerald-500/30"
+                    : "border-border hover:border-border-hover"
+                }`}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </AccordionSection>
+  );
+}
+
 function TransformPanel({
   layer,
   onUpdate,
@@ -1137,6 +1215,12 @@ export default function ConfigPanel() {
             )}
             {selectedLayer.type === "gradient" && (
               <GradientPropertiesPanel
+                layer={selectedLayer}
+                onUpdate={handleUpdate}
+              />
+            )}
+            {selectedLayer.type === "backgroundColor" && (
+              <BackgroundColorPropertiesPanel
                 layer={selectedLayer}
                 onUpdate={handleUpdate}
               />
