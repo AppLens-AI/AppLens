@@ -55,7 +55,7 @@ export interface CanvasConfig {
 
 export interface LayerConfig {
   id: string;
-  type: "text" | "image" | "shape" | "screenshot" | "gradient";
+  type: "text" | "image" | "shape" | "screenshot" | "gradient" | "backgroundColor";
   name: string;
   x: number;
   y: number;
@@ -65,7 +65,7 @@ export interface LayerConfig {
   visible: boolean;
   locked: boolean;
   opacity: number;
-  properties: TextProperties | ImageProperties | ShapeProperties | GradientProperties;
+  properties: TextProperties | ImageProperties | ShapeProperties | GradientProperties | BackgroundColorProperties;
   zIndex: number;
 }
 
@@ -137,6 +137,15 @@ export interface ShapeProperties {
   strokeWidth: number;
   cornerRadius: number;
   shapeType: "rect" | "circle" | "rounded";
+  position?: "top" | "center" | "bottom";
+  anchorX?: "left" | "center" | "right";
+  anchorY?: "top" | "center" | "bottom";
+  offsetX?: number;
+  offsetY?: number;
+}
+
+export interface BackgroundColorProperties {
+  color: string;
   position?: "top" | "center" | "bottom";
   anchorX?: "left" | "center" | "right";
   anchorY?: "top" | "center" | "bottom";

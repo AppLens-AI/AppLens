@@ -8,6 +8,7 @@ import type {
   ImageProperties,
   ShapeProperties,
   GradientProperties,
+  BackgroundColorProperties,
   ExportSize,
   CanvasConfig,
   LayerConfig,
@@ -313,6 +314,35 @@ export default function ExportPage() {
         }),
       );
     }
+  };
+
+  /** Render a background color layer onto the Konva layer. */
+  const renderBackgroundColorToKonva = (
+    konvaLayer: Konva.Layer,
+    layerConfig: LayerConfig,
+    canvas: CanvasConfig,
+    exportSize: ExportSize,
+  ) => {
+    const props = normalizeLayerProperties<BackgroundColorProperties>(
+      layerConfig.properties,
+    );
+    const pos = calculateExportLayerPosition(
+      layerConfig,
+      canvas,
+      exportSize,
+      props,
+    );
+
+    konvaLayer.add(
+      new Konva.Rect({
+        x: pos.x,
+        y: pos.y,
+        width: pos.width,
+        height: pos.height,
+        fill: props.color || "#ffffff",
+        opacity: layerConfig.opacity,
+      }),
+    );
   };
 
   /** Render a text layer onto the Konva layer. */
@@ -755,6 +785,9 @@ export default function ExportPage() {
             break;
           case "gradient":
             renderGradientToKonva(layer, layerConfig, exportSize);
+            break;
+          case "backgroundColor":
+            renderBackgroundColorToKonva(layer, layerConfig, canvas, exportSize);
             break;
           case "text":
             renderTextToKonva(layer, layerConfig, canvas, exportSize);
